@@ -1,10 +1,10 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
 const passport = require('passport');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+const connectDB = require('./config/database');
 
 const app = express();
 
@@ -19,19 +19,25 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: "Akkor Hotel API Documentation"
 }));
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Connexion à MongoDB
+connectDB();
 
-// Routes will be imported here
-// app.use('/api/auth', require('./routes/auth'));
-// app.use('/api/users', require('./routes/users'));
-// app.use('/api/hotels', require('./routes/hotels'));
-// app.use('/api/bookings', require('./routes/bookings'));
+// Routes
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
+
+// Middleware de gestion des erreurs
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Une erreur est survenue sur le serveur',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Documentation API disponible sur http://localhost:${PORT}/api-docs`);
+  console.info(`Serveur démarré sur le port ${PORT}`);
+  console.info(`Documentation API disponible sur http://localhost:${PORT}/api-docs`);
 });
