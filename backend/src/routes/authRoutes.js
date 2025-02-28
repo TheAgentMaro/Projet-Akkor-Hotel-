@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const { validateRegister, validateLogin } = require('../middleware/validator');
 
 /**
  * @swagger
@@ -82,7 +83,7 @@ const userController = require('../controllers/userController');
  *         description: Email ou mot de passe incorrect
  */
 
-router.post('/register', userController.register);
-router.post('/login', userController.login);
+router.post('/register', validateRegister, userController.register);
+router.post('/login', validateLogin, userController.login);
 
 module.exports = router;

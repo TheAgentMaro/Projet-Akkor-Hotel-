@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const { protect, admin } = require('../middleware/auth');
+const { validateUpdate } = require('../middleware/validator');
 
 /**
  * @swagger
@@ -138,7 +139,7 @@ router.get('/profile', protect, userController.getProfile);
  */
 router.route('/:id')
   .get(protect, userController.getUserById)
-  .put(protect, userController.updateUser)
+  .put(protect, validateUpdate, userController.updateUser)
   .delete(protect, userController.deleteUser);
 
 module.exports = router;
