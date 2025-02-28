@@ -6,7 +6,7 @@ const createError = require('http-errors');
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECRET || 'supinfo', // Fallback pour les tests
     { expiresIn: '24h' }
   );
 };
@@ -49,7 +49,7 @@ const userController = {
       const { email, password } = req.body;
 
       // Vérifier si l'utilisateur existe
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email }).select('+password');
       if (!user) {
         throw createError(401, 'Email ou mot de passe incorrect');
       }
@@ -121,11 +121,11 @@ const userController = {
       }
 
       const { email, pseudo, password } = req.body;
-      const updateData = { email, pseudo };
+      const updateData = {};
       
-      if (password) {
-        updateData.password = password;
-      }
+      if (email) updateData.email = email;
+      if (pseudo) updateData.pseudo = pseudo;
+      if (password) updateData.password = password;
 
       const user = await User.findByIdAndUpdate(
         req.params.id,
@@ -154,10 +154,12 @@ const userController = {
         throw createError(403, 'Non autorisé');
       }
 
-      const user = await User.findByIdAndDelete(req.params.id);
+      const user = await User.findById(req.params.id);
       if (!user) {
         throw createError(404, 'Utilisateur non trouvé');
       }
+
+      await user.deleteOne();
 
       res.json({
         success: true,

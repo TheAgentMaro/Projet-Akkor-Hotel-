@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../src/index');
+const app = require('../config/testServer');
 const User = require('../../src/models/User');
 
 require('../config/test-setup');
