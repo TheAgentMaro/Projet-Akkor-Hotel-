@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const { protect, admin } = require('../middleware/auth');
-const { validateUpdate } = require('../middleware/validator');
+const validator = require('../middleware/validator');
 
 /**
  * @swagger
- * /api/users:
+ * /api/users/register:
  *   post:
  *     summary: Créer un nouvel utilisateur
  *     tags: [Users]
@@ -32,7 +32,12 @@ const { validateUpdate } = require('../middleware/validator');
  *         description: Utilisateur créé avec succès
  *       409:
  *         description: Email déjà utilisé
- * 
+ */
+router.post('/register', validator.validateRegistration, userController.register);
+
+/**
+ * @swagger
+ * /api/users:
  *   get:
  *     summary: Obtenir la liste des utilisateurs (admin uniquement)
  *     tags: [Users]
@@ -44,9 +49,7 @@ const { validateUpdate } = require('../middleware/validator');
  *       403:
  *         description: Non autorisé
  */
-router.route('/')
-  .post(userController.register)
-  .get(protect, admin, userController.getAllUsers);
+router.use(protect); // Appliquer le middleware d'authentification à toutes les routes suivantes
 
 /**
  * @swagger
@@ -62,7 +65,7 @@ router.route('/')
  *       401:
  *         description: Non authentifié
  */
-router.get('/profile', protect, userController.getProfile);
+router.get('/profile', userController.getProfile);
 
 /**
  * @swagger
@@ -138,8 +141,24 @@ router.get('/profile', protect, userController.getProfile);
  *         description: Utilisateur non trouvé
  */
 router.route('/:id')
-  .get(protect, userController.getUserById)
-  .put(protect, validateUpdate, userController.updateUser)
-  .delete(protect, userController.deleteUser);
+  .get(userController.getUserById)
+  .put(validator.validateUserUpdate, userController.updateUser)
+  .delete(userController.deleteUser);
+
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Obtenir la liste des utilisateurs (admin uniquement)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Liste des utilisateurs
+ *       403:
+ *         description: Non autorisé
+ */
+router.get('/', admin, userController.getAllUsers);
 
 module.exports = router;

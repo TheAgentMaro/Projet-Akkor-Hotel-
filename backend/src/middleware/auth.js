@@ -20,7 +20,7 @@ const authMiddleware = {
 
       try {
         // Vérifier le token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supinfo');
 
         // Ajouter l'utilisateur à la requête
         const user = await User.findById(decoded.id);
@@ -34,6 +34,7 @@ const authMiddleware = {
         };
         next();
       } catch (error) {
+        console.error('Erreur de vérification du token:', error);
         throw createError(401, 'Non autorisé - Token invalide');
       }
     } catch (error) {
