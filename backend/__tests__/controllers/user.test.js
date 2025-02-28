@@ -30,14 +30,14 @@ describe('User Controller', () => {
     userId = user._id.toString();
     userToken = jwt.sign(
       { id: userId, role: user.role },
-      'secretkey'
+      process.env.JWT_SECRET || 'supinfo'
     );
 
     // Créer un admin
     const admin = await User.create(adminData);
     adminToken = jwt.sign(
       { id: admin._id.toString(), role: admin.role },
-      'secretkey'
+      process.env.JWT_SECRET || 'supinfo'
     );
   });
 

@@ -2,11 +2,13 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const createError = require('http-errors');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'supinfo';
+
 // Générer un JWT Token
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
-    process.env.JWT_SECRET || 'supinfo', // Fallback pour les tests
+    JWT_SECRET,
     { expiresIn: '24h' }
   );
 };

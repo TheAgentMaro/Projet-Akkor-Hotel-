@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const createError = require('http-errors');
 const User = require('../models/User');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'supinfo';
+
 const authMiddleware = {
   // Vérifier si l'utilisateur est authentifié
   async protect(req, res, next) {
@@ -20,7 +22,7 @@ const authMiddleware = {
 
       try {
         // Vérifier le token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supinfo');
+        const decoded = jwt.verify(token, JWT_SECRET);
 
         // Ajouter l'utilisateur à la requête
         const user = await User.findById(decoded.id);
