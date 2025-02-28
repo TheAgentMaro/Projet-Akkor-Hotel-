@@ -20,7 +20,7 @@ const authMiddleware = {
 
       try {
         // Vérifier le token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
 
         // Ajouter l'utilisateur à la requête
         const user = await User.findById(decoded.id);
@@ -29,7 +29,7 @@ const authMiddleware = {
         }
 
         req.user = {
-          id: user._id,
+          id: user._id.toString(),
           role: user.role
         };
         next();
@@ -44,7 +44,7 @@ const authMiddleware = {
   // Vérifier si l'utilisateur est admin
   async admin(req, res, next) {
     try {
-      if (req.user.role !== 'admin') {
+      if (!req.user || req.user.role !== 'admin') {
         throw createError(403, 'Non autorisé - Réservé aux administrateurs');
       }
       next();

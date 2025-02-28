@@ -27,16 +27,16 @@ describe('User Controller', () => {
   beforeEach(async () => {
     // Créer un utilisateur normal
     const user = await User.create(userData);
-    userId = user._id;
+    userId = user._id.toString();
     userToken = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: userId, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key'
     );
 
     // Créer un admin
     const admin = await User.create(adminData);
     adminToken = jwt.sign(
-      { id: admin._id, role: admin.role },
+      { id: admin._id.toString(), role: admin.role },
       process.env.JWT_SECRET || 'your-secret-key'
     );
   });
