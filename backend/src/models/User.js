@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 /**
  * @swagger
@@ -30,25 +31,27 @@ const mongoose = require('mongoose');
  *           enum: [user, admin]
  *           default: user
  *           description: Rôle de l'utilisateur
- *       example:
- *         email: user@akkor-hotel.com
- *         pseudo: JohnDoe
- *         password: hashedPassword123
- *         role: user
  */
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: true,
-    unique: true
+    required: [true, 'Email est requis'],
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Format email invalide']
   },
   pseudo: {
     type: String,
-    required: true
+    required: [true, 'Pseudo est requis'],
+    trim: true,
+    minlength: [3, 'Pseudo doit faire au moins 3 caractères'],
+    maxlength: [30, 'Pseudo ne peut pas dépasser 30 caractères']
   },
   password: {
     type: String,
-    required: true
+    required: [true, 'Mot de passe est requis'],
+    minlength: [6, 'Mot de passe doit faire au moins 6 caractères']
   },
   role: {
     type: String,
@@ -58,5 +61,30 @@ const userSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Hash le mot de passe avant la sauvegarde
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Méthode pour comparer les mots de passe
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Méthode pour retourner l'utilisateur sans le mot de passe
+userSchema.methods.toJSON = function() {
+  const user = this.toObject();
+  delete user.password;
+  return user;
+};
 
 module.exports = mongoose.model('User', userSchema);
