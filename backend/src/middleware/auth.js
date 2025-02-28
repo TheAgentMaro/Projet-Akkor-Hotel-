@@ -2,6 +2,7 @@
 const jwt = require('jsonwebtoken');
 const createError = require('http-errors');
 const User = require('../models/User');
+const authController = require('../controllers/authController');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supinfo';
 
@@ -18,6 +19,11 @@ const authMiddleware = {
 
       if (!token) {
         throw createError(401, 'Non autorisé - Token manquant');
+      }
+
+      // Vérifier si le token est blacklisté
+      if (authController.isTokenBlacklisted(token)) {
+        throw createError(401, 'Non autorisé - Session expirée');
       }
 
       try {

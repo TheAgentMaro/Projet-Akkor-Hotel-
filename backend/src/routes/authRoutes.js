@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const validator = require('../middleware/validator');
+const { protect } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -86,5 +87,8 @@ const validator = require('../middleware/validator');
 // Routes publiques
 router.post('/register', validator.validateRegistration, authController.register);
 router.post('/login', validator.validateLogin, authController.login);
+
+// Route protégée
+router.post('/logout', protect, authController.logout);
 
 module.exports = router;

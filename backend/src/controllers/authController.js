@@ -5,6 +5,9 @@ const createError = require('http-errors');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supinfo';
 
+// Set pour stocker les tokens blacklistés
+const tokenBlacklist = new Set();
+
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
@@ -73,6 +76,27 @@ const authController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  // Déconnexion
+  async logout(req, res, next) {
+    try {
+      const token = req.headers.authorization?.split(' ')[1];
+      if (token) {
+        tokenBlacklist.add(token);
+      }
+      res.json({
+        success: true,
+        message: 'Déconnexion réussie'
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Vérifier si un token est blacklisté
+  isTokenBlacklisted(token) {
+    return tokenBlacklist.has(token);
   }
 };
 
