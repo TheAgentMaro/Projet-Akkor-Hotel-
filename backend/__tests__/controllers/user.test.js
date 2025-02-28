@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../../src/index');
+const app = require('../config/testServer');
 const User = require('../../src/models/User');
 const jwt = require('jsonwebtoken');
 
@@ -30,14 +30,14 @@ describe('User Controller', () => {
     userId = user._id;
     userToken = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET
+      process.env.JWT_SECRET || 'your-secret-key'
     );
 
     // Créer un admin
     const admin = await User.create(adminData);
     adminToken = jwt.sign(
       { id: admin._id, role: admin.role },
-      process.env.JWT_SECRET
+      process.env.JWT_SECRET || 'your-secret-key'
     );
   });
 
