@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const userController = require('../controllers/userController');
-const { validateRegister, validateLogin } = require('../middleware/validator');
+const authController = require('../controllers/authController');
+const validator = require('../middleware/validator');
 
 /**
  * @swagger
@@ -83,7 +83,8 @@ const { validateRegister, validateLogin } = require('../middleware/validator');
  *         description: Email ou mot de passe incorrect
  */
 
-router.post('/register', validateRegister, userController.register);
-router.post('/login', validateLogin, userController.login);
+// Routes publiques
+router.post('/register', validator.validateRegistration, authController.register);
+router.post('/login', validator.validateLogin, authController.login);
 
 module.exports = router;
