@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const userController = require('../controllers/userController');
 
 /**
  * @swagger
@@ -29,8 +30,17 @@ const router = express.Router();
  *     responses:
  *       201:
  *         description: Utilisateur créé avec succès
- *       400:
- *         description: Données invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *                 token:
+ *                   type: string
  *       409:
  *         description: Email déjà utilisé
  * 
@@ -62,20 +72,17 @@ const router = express.Router();
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
  *                 token:
  *                   type: string
- *                   description: JWT token
  *       401:
  *         description: Email ou mot de passe incorrect
  */
 
-// Routes à implémenter
-router.post('/register', (req, res) => {
-  // Implémentation à venir
-});
-
-router.post('/login', (req, res) => {
-  // Implémentation à venir
-});
+router.post('/register', userController.register);
+router.post('/login', userController.login);
 
 module.exports = router;
