@@ -21,7 +21,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 // Connexion à MongoDB
-connectDB();
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
@@ -64,8 +66,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.info(`Serveur démarré sur le port ${PORT}`);
-  console.info(`Documentation API disponible sur http://localhost:${PORT}/api-docs`);
-});
+// Démarrer le serveur seulement si nous ne sommes pas en test
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.info(`Serveur démarré sur le port ${PORT}`);
+    console.info(`Documentation API disponible sur http://localhost:${PORT}/api-docs`);
+  });
+}
+
+module.exports = app;
