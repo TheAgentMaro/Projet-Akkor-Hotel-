@@ -1,57 +1,85 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Login from '../../../src/pages/auth/Login';
+import axios from 'axios';
 
-// Pour réinitialiser le localStorage dans chaque test
-beforeEach(() => {
-  localStorage.clear();
-});
+// On mock axios
+vi.mock('axios');
 
 describe('Login Page', () => {
-  it('renders the login form fields', () => {
-    render(<Login />);
-
-    // Vérifier la présence des champs
-    expect(screen.getByText('Connexion')).toBeInTheDocument();
-    expect(screen.getByLabelText('Email')).toBeInTheDocument();
-    expect(screen.getByLabelText('Mot de passe')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Se connecter/i })).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it('successfully logs in with correct credentials', async () => {
+    // Simule la réponse de axios.post(/auth/login) en cas de réussite
+    axios.post.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: {
+          email: 'test@example.com',
+          pseudo: 'userTest',
+        },
+        token: 'FAKE_TOKEN_123',
+      },
+    });
+
     render(<Login />);
 
     // Remplir le formulaire
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Mot de passe'), {
+      target: { value: 'password123' },
+    });
 
     // Soumettre
     fireEvent.click(screen.getByRole('button', { name: /Se connecter/i }));
 
-    // Attendre que le succès apparaisse
+    // Attendre le message de succès
     const successMsg = await screen.findByText('Connexion réussie !');
     expect(successMsg).toBeInTheDocument();
 
-    // Vérifier que le token a bien été stocké
-    const storedToken = localStorage.getItem('token');
-    expect(storedToken).toBe('FAKE_TOKEN_123');
+    // Vérifier que le token est stocké
+    expect(localStorage.getItem('token')).toBe('FAKE_TOKEN_123');
+
+    // Vérifier qu'on a bien appelé axios.post avec les bons paramètres
+    expect(axios.post).toHaveBeenCalledWith(
+      'http://localhost:3000/api/auth/login',
+      { email: 'test@example.com', password: 'password123' }
+    );
   });
 
   it('shows an error message with invalid credentials', async () => {
+    // Simule un échec (401)
+    axios.post.mockRejectedValueOnce({
+      response: {
+        data: {
+          success: false,
+          error: 'Email ou mot de passe incorrect',
+        },
+      },
+    });
+
     render(<Login />);
 
-    // Remplir le formulaire avec mauvais MDP
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByLabelText('Mot de passe'), { target: { value: 'wrong' } });
+    // Remplir le formulaire (mauvais MDP)
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Mot de passe'), {
+      target: { value: 'wrongpassword' },
+    });
 
-    // Soumettre
     fireEvent.click(screen.getByRole('button', { name: /Se connecter/i }));
 
     // Attendre le message d'erreur
     const errorMsg = await screen.findByText('Email ou mot de passe incorrect');
     expect(errorMsg).toBeInTheDocument();
 
-    // Assurer que le token n'a pas été stocké
+    // Vérifier que le token n’est pas stocké
     expect(localStorage.getItem('token')).toBeNull();
   });
 });

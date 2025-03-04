@@ -1,11 +1,5 @@
-import '@testing-library/jest-dom';
-import { server } from './mocks/server';
+import { expect } from 'vitest';
+import matchers from '@testing-library/jest-dom/matchers';
 
-// Avant tous les tests, on démarre le serveur mock
-beforeAll(() => server.listen());
-
-// Après chaque test, on réinitialise les handlers
-afterEach(() => server.resetHandlers());
-
-// Après tous les tests, on éteint le serveur mock
-afterAll(() => server.close());
+// Ajout des matchers jest-dom à Vitest
+expect.extend(matchers);
