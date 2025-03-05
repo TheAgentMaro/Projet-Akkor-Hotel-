@@ -56,6 +56,46 @@ const validator = {
     }
 
     next();
+  },
+
+  validateHotelCreate(req, res, next) {
+    const { name, location, description } = req.body;
+
+    if (!name || !location || !description) {
+      return next(createError(400, 'Nom, localisation et description sont requis'));
+    }
+
+    if (name.length < 2) {
+      return next(createError(400, 'Le nom doit contenir au moins 2 caractères'));
+    }
+
+    if (location.length < 2) {
+      return next(createError(400, 'La localisation doit contenir au moins 2 caractères'));
+    }
+
+    if (description.length < 10) {
+      return next(createError(400, 'La description doit contenir au moins 10 caractères'));
+    }
+
+    next();
+  },
+
+  validateHotelUpdate(req, res, next) {
+    const { name, location, description } = req.body;
+
+    if (name && name.length < 2) {
+      return next(createError(400, 'Le nom doit contenir au moins 2 caractères'));
+    }
+
+    if (location && location.length < 2) {
+      return next(createError(400, 'La localisation doit contenir au moins 2 caractères'));
+    }
+
+    if (description && description.length < 10) {
+      return next(createError(400, 'La description doit contenir au moins 10 caractères'));
+    }
+
+    next();
   }
 };
 
