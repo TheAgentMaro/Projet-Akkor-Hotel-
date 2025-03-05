@@ -5,16 +5,26 @@ const hotelController = {
   // Lister tous les hôtels avec tri et pagination
   async getAllHotels(req, res, next) {
     try {
-      const {
+      const { 
         sort = 'createdAt', // tri par défaut par date de création
         order = 'desc',
         limit = 10,
         page = 1
       } = req.query;
 
+      // Valider les paramètres
+      const validSortFields = ['name', 'location', 'createdAt'];
+      if (!validSortFields.includes(sort)) {
+        throw createError(400, 'Champ de tri invalide');
+      }
+
+      const validOrders = ['asc', 'desc'];
+      if (!validOrders.includes(order)) {
+        throw createError(400, 'Ordre de tri invalide');
+      }
+
       // Construire l'objet de tri
-      const sortObj = {};
-      sortObj[sort] = order === 'desc' ? -1 : 1;
+      const sortObj = { [sort]: order === 'desc' ? -1 : 1 };
 
       // Calculer le skip pour la pagination
       const skip = (page - 1) * limit;
@@ -32,8 +42,9 @@ const hotelController = {
         success: true,
         data: hotels,
         pagination: {
+          current: parseInt(page),
+          limit: parseInt(limit),
           total,
-          page: parseInt(page),
           pages: Math.ceil(total / limit)
         }
       });
@@ -62,7 +73,14 @@ const hotelController = {
   // Créer un nouvel hôtel (admin uniquement)
   async createHotel(req, res, next) {
     try {
-      const hotel = await Hotel.create(req.body);
+      const { name, location, description, picture_list } = req.body;
+
+      const hotel = await Hotel.create({
+        name,
+        location,
+        description,
+        picture_list
+      });
 
       res.status(201).json({
         success: true,
@@ -76,9 +94,16 @@ const hotelController = {
   // Mettre à jour un hôtel (admin uniquement)
   async updateHotel(req, res, next) {
     try {
+      const { name, location, description, picture_list } = req.body;
+
       const hotel = await Hotel.findByIdAndUpdate(
         req.params.id,
-        req.body,
+        {
+          name,
+          location,
+          description,
+          picture_list
+        },
         { new: true, runValidators: true }
       );
 
@@ -99,7 +124,7 @@ const hotelController = {
   async deleteHotel(req, res, next) {
     try {
       const hotel = await Hotel.findByIdAndDelete(req.params.id);
-
+      
       if (!hotel) {
         throw createError(404, 'Hôtel non trouvé');
       }

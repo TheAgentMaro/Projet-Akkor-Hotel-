@@ -15,10 +15,10 @@ const hotelSchema = new mongoose.Schema({
     type: String,
     required: [true, 'La description est requise']
   },
-  picture_list: [{
-    type: String,
-    required: [true, 'Au moins une image est requise']
-  }],
+  picture_list: {
+    type: [String],
+    default: []
+  },
   createdAt: {
     type: Date,
     default: Date.now
