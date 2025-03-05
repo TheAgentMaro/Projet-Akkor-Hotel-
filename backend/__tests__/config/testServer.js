@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const userRoutes = require('../../src/routes/userRoutes');
 const authRoutes = require('../../src/routes/authRoutes');
+const hotelRoutes = require('../../src/routes/hotelRoutes');
 const createError = require('http-errors');
 
 const app = express();
@@ -13,6 +14,7 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/hotels', hotelRoutes);
 
 // Route 404
 app.use((req, res, next) => {
