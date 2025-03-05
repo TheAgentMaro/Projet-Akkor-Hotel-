@@ -28,9 +28,11 @@ if (process.env.NODE_ENV !== 'test') {
 // Routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const hotelRoutes = require('./routes/hotelRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/hotels', hotelRoutes);
 
 // Route 404
 app.use((req, res, next) => {
