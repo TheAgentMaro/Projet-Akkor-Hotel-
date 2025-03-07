@@ -3,6 +3,7 @@ const cors = require('cors');
 const userRoutes = require('../../src/routes/userRoutes');
 const authRoutes = require('../../src/routes/authRoutes');
 const hotelRoutes = require('../../src/routes/hotelRoutes');
+const bookingRoutes = require('../../src/routes/bookingRoutes');
 const createError = require('http-errors');
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/hotels', hotelRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 // Route 404
 app.use((req, res, next) => {
