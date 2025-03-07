@@ -6,6 +6,24 @@ const bookingController = {
   // Créer une réservation
   async createBooking(req, res, next) {
     try {
+      // Valider les dates avant de créer la réservation
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      const checkIn = new Date(req.body.checkIn);
+      checkIn.setHours(0, 0, 0, 0);
+
+      const checkOut = new Date(req.body.checkOut);
+      checkOut.setHours(0, 0, 0, 0);
+
+      if (checkIn < now) {
+        throw createError(400, 'La date d\'arrivée ne peut pas être dans le passé');
+      }
+
+      if (checkIn >= checkOut) {
+        throw createError(400, 'La date de départ doit être après la date d\'arrivée');
+      }
+
       const booking = await Booking.create({
         ...req.body,
         user: req.user.id
@@ -18,7 +36,11 @@ const bookingController = {
         data: booking
       });
     } catch (error) {
-      next(error);
+      if (error.name === 'ValidationError') {
+        next(createError(400, error.message));
+      } else {
+        next(error);
+      }
     }
   },
 
@@ -109,7 +131,7 @@ const bookingController = {
       }
 
       // Vérifier les permissions
-      if (req.user.role !== 'admin' && booking.user._id.toString() !== req.user.id.toString()) {
+      if (req.user.role !== 'admin' && booking.user._id.toString() !== req.user.id) {
         throw createError(403, 'Non autorisé');
       }
 
@@ -136,6 +158,26 @@ const bookingController = {
         throw createError(403, 'Non autorisé');
       }
 
+      // Valider les dates si elles sont modifiées
+      if (req.body.checkIn || req.body.checkOut) {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const checkIn = new Date(req.body.checkIn || booking.checkIn);
+        checkIn.setHours(0, 0, 0, 0);
+
+        const checkOut = new Date(req.body.checkOut || booking.checkOut);
+        checkOut.setHours(0, 0, 0, 0);
+
+        if (checkIn < now) {
+          throw createError(400, 'La date d\'arrivée ne peut pas être dans le passé');
+        }
+
+        if (checkIn >= checkOut) {
+          throw createError(400, 'La date de départ doit être après la date d\'arrivée');
+        }
+      }
+
       // Ne pas permettre la modification de l'utilisateur ou de l'hôtel
       delete req.body.user;
       delete req.body.hotel;
@@ -151,7 +193,11 @@ const bookingController = {
         data: updatedBooking
       });
     } catch (error) {
-      next(error);
+      if (error.name === 'ValidationError') {
+        next(createError(400, error.message));
+      } else {
+        next(error);
+      }
     }
   },
 

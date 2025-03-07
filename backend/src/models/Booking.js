@@ -62,12 +62,42 @@ bookingSchema.pre('validate', function(next) {
     const checkOutDate = new Date(this.checkOut);
     checkOutDate.setHours(0, 0, 0, 0);
 
+    // Vérifier que la date d'arrivée est future
+    if (checkInDate < now) {
+      this.invalidate('checkIn', 'La date d\'arrivée ne peut pas être dans le passé');
+    }
+
+    // Vérifier que la date de départ est après la date d'arrivée
     if (checkInDate >= checkOutDate) {
       this.invalidate('checkOut', 'La date de départ doit être après la date d\'arrivée');
     }
+  }
+  next();
+});
+
+// Middleware pour la mise à jour
+bookingSchema.pre('findOneAndUpdate', async function(next) {
+  const update = this.getUpdate();
+  if (update.checkIn || update.checkOut) {
+    const doc = await this.model.findOne(this.getQuery());
+    const checkIn = update.checkIn || doc.checkIn;
+    const checkOut = update.checkOut || doc.checkOut;
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const checkInDate = new Date(checkIn);
+    checkInDate.setHours(0, 0, 0, 0);
+
+    const checkOutDate = new Date(checkOut);
+    checkOutDate.setHours(0, 0, 0, 0);
 
     if (checkInDate < now) {
-      this.invalidate('checkIn', 'La date d\'arrivée ne peut pas être dans le passé');
+      throw new Error('La date d\'arrivée ne peut pas être dans le passé');
+    }
+
+    if (checkInDate >= checkOutDate) {
+      throw new Error('La date de départ doit être après la date d\'arrivée');
     }
   }
   next();
