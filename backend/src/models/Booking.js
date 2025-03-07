@@ -53,10 +53,20 @@ const bookingSchema = new mongoose.Schema({
 // Validation personnalisée pour les dates
 bookingSchema.pre('validate', function(next) {
   if (this.checkIn && this.checkOut) {
-    if (this.checkIn >= this.checkOut) {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const checkInDate = new Date(this.checkIn);
+    checkInDate.setHours(0, 0, 0, 0);
+
+    const checkOutDate = new Date(this.checkOut);
+    checkOutDate.setHours(0, 0, 0, 0);
+
+    if (checkInDate >= checkOutDate) {
       this.invalidate('checkOut', 'La date de départ doit être après la date d\'arrivée');
     }
-    if (this.checkIn < new Date()) {
+
+    if (checkInDate < now) {
       this.invalidate('checkIn', 'La date d\'arrivée ne peut pas être dans le passé');
     }
   }

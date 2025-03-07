@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-const userRoutes = require('../../src/routes/userRoutes');
+const createError = require('http-errors');
+
+// Routes
 const authRoutes = require('../../src/routes/authRoutes');
+const userRoutes = require('../../src/routes/userRoutes');
 const hotelRoutes = require('../../src/routes/hotelRoutes');
 const bookingRoutes = require('../../src/routes/bookingRoutes');
-const createError = require('http-errors');
 
 const app = express();
 
@@ -25,6 +27,9 @@ app.use((req, res, next) => {
 
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
+  // Log de l'erreur pour le débogage
+  console.error(err);
+
   // Erreurs de validation Mongoose
   if (err.name === 'ValidationError') {
     const messages = Object.values(err.errors).map(error => error.message);
@@ -40,6 +45,14 @@ app.use((err, req, res, next) => {
     return res.status(409).json({
       success: false,
       error: 'Cette valeur existe déjà'
+    });
+  }
+
+  // Erreur de cast MongoDB (ID invalide)
+  if (err.name === 'CastError') {
+    return res.status(400).json({
+      success: false,
+      error: 'ID invalide'
     });
   }
 

@@ -105,66 +105,87 @@ const validator = {
       return next(createError(400, 'Tous les champs sont requis'));
     }
 
-    // Validation des dates
-    const checkInDate = new Date(checkIn);
-    const checkOutDate = new Date(checkOut);
-    const now = new Date();
-
-    if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
-      return next(createError(400, 'Dates invalides'));
-    }
-
-    if (checkInDate < now) {
-      return next(createError(400, 'La date d\'arrivée ne peut pas être dans le passé'));
-    }
-
-    if (checkInDate >= checkOutDate) {
-      return next(createError(400, 'La date de départ doit être après la date d\'arrivée'));
-    }
-
-    // Validation du nombre de personnes
-    if (numberOfGuests < 1) {
-      return next(createError(400, 'Au moins une personne requise'));
-    }
-
-    // Validation du prix
-    if (totalPrice < 0) {
-      return next(createError(400, 'Le prix ne peut pas être négatif'));
-    }
-
-    next();
-  },
-
-  validateBookingUpdate(req, res, next) {
-    const { checkIn, checkOut, numberOfGuests, totalPrice } = req.body;
-
-    if (checkIn || checkOut) {
-      const checkInDate = new Date(checkIn || req.booking.checkIn);
-      const checkOutDate = new Date(checkOut || req.booking.checkOut);
+    try {
+      // Validation des dates
+      const checkInDate = new Date(checkIn);
+      const checkOutDate = new Date(checkOut);
       const now = new Date();
+      now.setHours(0, 0, 0, 0);
 
       if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
         return next(createError(400, 'Dates invalides'));
       }
 
-      if (checkInDate < now) {
+      const normalizedCheckIn = new Date(checkInDate);
+      normalizedCheckIn.setHours(0, 0, 0, 0);
+
+      const normalizedCheckOut = new Date(checkOutDate);
+      normalizedCheckOut.setHours(0, 0, 0, 0);
+
+      if (normalizedCheckIn < now) {
         return next(createError(400, 'La date d\'arrivée ne peut pas être dans le passé'));
       }
 
-      if (checkInDate >= checkOutDate) {
+      if (normalizedCheckIn >= normalizedCheckOut) {
         return next(createError(400, 'La date de départ doit être après la date d\'arrivée'));
       }
-    }
 
-    if (numberOfGuests !== undefined && numberOfGuests < 1) {
-      return next(createError(400, 'Au moins une personne requise'));
-    }
+      // Validation du nombre de personnes
+      if (numberOfGuests < 1) {
+        return next(createError(400, 'Au moins une personne requise'));
+      }
 
-    if (totalPrice !== undefined && totalPrice < 0) {
-      return next(createError(400, 'Le prix ne peut pas être négatif'));
-    }
+      // Validation du prix
+      if (totalPrice < 0) {
+        return next(createError(400, 'Le prix ne peut pas être négatif'));
+      }
 
-    next();
+      next();
+    } catch (error) {
+      return next(createError(400, 'Erreur de validation des dates'));
+    }
+  },
+
+  validateBookingUpdate(req, res, next) {
+    const { checkIn, checkOut, numberOfGuests, totalPrice } = req.body;
+
+    try {
+      if (checkIn || checkOut) {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const checkInDate = checkIn ? new Date(checkIn) : req.booking?.checkIn;
+        const checkOutDate = checkOut ? new Date(checkOut) : req.booking?.checkOut;
+
+        if (checkInDate && checkOutDate) {
+          const normalizedCheckIn = new Date(checkInDate);
+          normalizedCheckIn.setHours(0, 0, 0, 0);
+
+          const normalizedCheckOut = new Date(checkOutDate);
+          normalizedCheckOut.setHours(0, 0, 0, 0);
+
+          if (normalizedCheckIn < now) {
+            return next(createError(400, 'La date d\'arrivée ne peut pas être dans le passé'));
+          }
+
+          if (normalizedCheckIn >= normalizedCheckOut) {
+            return next(createError(400, 'La date de départ doit être après la date d\'arrivée'));
+          }
+        }
+      }
+
+      if (numberOfGuests !== undefined && numberOfGuests < 1) {
+        return next(createError(400, 'Au moins une personne requise'));
+      }
+
+      if (totalPrice !== undefined && totalPrice < 0) {
+        return next(createError(400, 'Le prix ne peut pas être négatif'));
+      }
+
+      next();
+    } catch (error) {
+      return next(createError(400, 'Erreur de validation des dates'));
+    }
   }
 };
 
