@@ -1,18 +1,6 @@
 const mongoose = require('mongoose');
 const Hotel = require('../../src/models/Hotel');
-const { MongoMemoryServer } = require('mongodb-memory-server');
-
-let mongoServer;
-
-beforeAll(async () => {
-  mongoServer = await MongoMemoryServer.create();
-  await mongoose.connect(mongoServer.getUri());
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongoServer.stop();
-});
+require('../config/test-setup');
 
 describe('Hotel Model Test', () => {
   it('should create & save hotel successfully', async () => {
