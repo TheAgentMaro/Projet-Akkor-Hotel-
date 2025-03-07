@@ -109,7 +109,7 @@ const bookingController = {
       }
 
       // Vérifier les permissions
-      if (req.user.role !== 'admin' && booking.user.toString() !== req.user.id) {
+      if (req.user.role !== 'admin' && booking.user._id.toString() !== req.user.id.toString()) {
         throw createError(403, 'Non autorisé');
       }
 
