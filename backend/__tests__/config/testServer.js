@@ -27,8 +27,11 @@ app.use((req, res, next) => {
 
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
-  // Log de l'erreur pour le débogage
-  console.error(err);
+  // En mode test, on ne log que les erreurs inattendues
+  if (process.env.NODE_ENV !== 'test' || 
+      (err.status !== 400 && err.status !== 401 && err.status !== 403 && err.status !== 404 && err.status !== 409)) {
+    console.error(err);
+  }
 
   // Erreurs de validation Mongoose
   if (err.name === 'ValidationError') {
