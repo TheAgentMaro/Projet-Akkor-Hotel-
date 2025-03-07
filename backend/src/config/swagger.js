@@ -18,6 +18,24 @@ const options = {
         description: 'Serveur de développement'
       }
     ],
+    tags: [
+      {
+        name: 'Authentication',
+        description: 'Endpoints pour l\'authentification'
+      },
+      {
+        name: 'Users',
+        description: 'Gestion des utilisateurs'
+      },
+      {
+        name: 'Hotels',
+        description: 'Gestion des hôtels'
+      },
+      {
+        name: 'Bookings',
+        description: 'Gestion des réservations'
+      }
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {

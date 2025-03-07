@@ -31,10 +31,18 @@ const userRoutes = require('./routes/userRoutes');
 const hotelRoutes = require('./routes/hotelRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 
+// Ignorer les requêtes favicon.ico
+app.get('/favicon.ico', (req, res) => res.status(204));
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/bookings', bookingRoutes);
+
+// Route racine
+app.get('/', (req, res) => {
+  res.redirect('/api-docs');
+});
 
 // Route 404
 app.use((req, res, next) => {
@@ -43,39 +51,32 @@ app.use((req, res, next) => {
 
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
-  console.error(err);
+  // Ne pas logger les erreurs 404 en production
+  if (process.env.NODE_ENV !== 'production' || err.status !== 404) {
+    console.error(err);
+  }
 
   // Erreurs de validation Mongoose
   if (err.name === 'ValidationError') {
     const messages = Object.values(err.errors).map(error => error.message);
     return res.status(400).json({
       success: false,
-      error: 'Erreur de validation',
-      messages
-    });
-  }
-
-  // Erreur de duplication MongoDB
-  if (err.code === 11000) {
-    return res.status(409).json({
-      success: false,
-      error: 'Cette valeur existe déjà'
+      error: messages.join(', ')
     });
   }
 
   res.status(err.status || 500).json({
     success: false,
-    error: err.message || 'Erreur serveur',
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    error: err.message || 'Erreur serveur'
   });
 });
 
-// Démarrer le serveur seulement si nous ne sommes pas en test
+const PORT = process.env.PORT || 3000;
+
 if (process.env.NODE_ENV !== 'test') {
-  const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.info(`Serveur démarré sur le port ${PORT}`);
-    console.info(`Documentation API disponible sur http://localhost:${PORT}/api-docs`);
+    console.log(`Serveur démarré sur le port ${PORT}`);
+    console.log(`Documentation API disponible sur http://localhost:${PORT}/api-docs`);
   });
 }
 
