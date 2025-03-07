@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const hotelController = require('../controllers/hotelController');
-const { authenticate, authorize } = require('../middleware/auth');
-const { validateHotel } = require('../middleware/validator');
+const auth = require('../middleware/auth');
+const validator = require('../middleware/validator');
 
 /**
  * @swagger
@@ -97,7 +97,7 @@ router.get('/', hotelController.getAllHotels);
  *       403:
  *         description: Non autorisé (réservé aux administrateurs)
  */
-router.post('/', authenticate, authorize('admin'), validateHotel, hotelController.createHotel);
+router.post('/', auth.protect, auth.admin, validator.validateHotelCreate, hotelController.createHotel);
 
 /**
  * @swagger
@@ -170,7 +170,7 @@ router.get('/:id', hotelController.getHotelById);
  *       404:
  *         description: Hôtel non trouvé
  */
-router.put('/:id', authenticate, authorize('admin'), validateHotel, hotelController.updateHotel);
+router.put('/:id', auth.protect, auth.admin, validator.validateHotelUpdate, hotelController.updateHotel);
 
 /**
  * @swagger
@@ -198,6 +198,6 @@ router.put('/:id', authenticate, authorize('admin'), validateHotel, hotelControl
  *       404:
  *         description: Hôtel non trouvé
  */
-router.delete('/:id', authenticate, authorize('admin'), hotelController.deleteHotel);
+router.delete('/:id', auth.protect, auth.admin, hotelController.deleteHotel);
 
 module.exports = router;
