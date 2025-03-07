@@ -109,7 +109,7 @@ const bookingController = {
       }
 
       // Vérifier les permissions
-      if (!req.user.role === 'admin' && booking.user.toString() !== req.user.id) {
+      if (req.user.role !== 'admin' && booking.user.toString() !== req.user.id) {
         throw createError(403, 'Non autorisé');
       }
 
@@ -132,7 +132,7 @@ const bookingController = {
       }
 
       // Vérifier les permissions
-      if (!req.user.role === 'admin' && booking.user.toString() !== req.user.id) {
+      if (req.user.role !== 'admin' && booking.user.toString() !== req.user.id) {
         throw createError(403, 'Non autorisé');
       }
 
@@ -165,7 +165,7 @@ const bookingController = {
       }
 
       // Vérifier les permissions
-      if (!req.user.role === 'admin' && booking.user.toString() !== req.user.id) {
+      if (req.user.role !== 'admin' && booking.user.toString() !== req.user.id) {
         throw createError(403, 'Non autorisé');
       }
 

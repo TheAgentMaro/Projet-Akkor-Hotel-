@@ -3,14 +3,14 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 
 let mongoServer;
 
-// Connexion à la base de données de test
+// Connexion à la base de données de test en mémoire
 beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   const mongoUri = mongoServer.getUri();
   await mongoose.connect(mongoUri);
 });
 
-// Nettoyer la base de données après chaque test
+// Nettoyage après chaque test
 afterEach(async () => {
   const collections = mongoose.connection.collections;
   for (const key in collections) {
@@ -18,7 +18,7 @@ afterEach(async () => {
   }
 });
 
-// Fermer la connexion après tous les tests
+// Déconnexion et arrêt du serveur après tous les tests
 afterAll(async () => {
   await mongoose.disconnect();
   await mongoServer.stop();

@@ -4,6 +4,7 @@ const Booking = require('../../src/models/Booking');
 const User = require('../../src/models/User');
 const Hotel = require('../../src/models/Hotel');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 require('../config/test-setup');
 
@@ -35,9 +36,17 @@ describe('Booking Controller', () => {
     picture_list: ['test1.jpg', 'test2.jpg']
   };
 
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(12, 0, 0, 0);
+
+  const dayAfterTomorrow = new Date();
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+  dayAfterTomorrow.setHours(12, 0, 0, 0);
+
   const bookingData = {
-    checkIn: new Date(Date.now() + 86400000), // Demain
-    checkOut: new Date(Date.now() + 172800000), // Après-demain
+    checkIn: tomorrow.toISOString(),
+    checkOut: dayAfterTomorrow.toISOString(),
     numberOfGuests: 2,
     totalPrice: 200,
     specialRequests: 'Test request'
@@ -89,14 +98,22 @@ describe('Booking Controller', () => {
     });
 
     it('should not create booking with invalid dates', async () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(12, 0, 0, 0);
+
+      const dayBeforeYesterday = new Date();
+      dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+      dayBeforeYesterday.setHours(12, 0, 0, 0);
+
       const res = await request(app)
         .post('/api/bookings')
         .set('Authorization', `Bearer ${userToken}`)
         .send({
           ...bookingData,
           hotel: hotelId,
-          checkIn: new Date(Date.now() - 86400000), // Hier
-          checkOut: new Date(Date.now() - 172800000) // Avant-hier
+          checkIn: yesterday.toISOString(),
+          checkOut: dayBeforeYesterday.toISOString()
         });
 
       expect(res.statusCode).toBe(400);
@@ -151,11 +168,15 @@ describe('Booking Controller', () => {
     });
 
     it('should not update booking dates to invalid values', async () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(12, 0, 0, 0);
+
       const res = await request(app)
         .put(`/api/bookings/${bookingId}`)
         .set('Authorization', `Bearer ${userToken}`)
         .send({
-          checkIn: new Date(Date.now() - 86400000) // Hier
+          checkIn: yesterday.toISOString()
         });
 
       expect(res.statusCode).toBe(400);
