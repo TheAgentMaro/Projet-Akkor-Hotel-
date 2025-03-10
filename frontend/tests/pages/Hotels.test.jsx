@@ -1,4 +1,3 @@
-// frontend/tests/pages/Hotels.test.jsx
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import Hotels from '../../../src/pages/Hotels';

@@ -1,4 +1,3 @@
-// frontend/src/pages/Hotels.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
