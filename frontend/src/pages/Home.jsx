@@ -1,10 +1,10 @@
 import React from 'react';
 
-// Page d'accueil à implémenter
 const Home = () => {
   return (
-    <div>
-      {/* Contenu à définir */}
+    <div className="text-center">
+      <h1 className="text-3xl font-bold mb-4">Bienvenue sur Akkor Hotel</h1>
+      <p className="text-lg">Réservez votre hôtel en quelques clics partout dans le monde.</p>
     </div>
   );
 };
