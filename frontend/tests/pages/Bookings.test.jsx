@@ -1,13 +1,16 @@
-// frontend/tests/pages/Bookings.test.jsx
 import React from 'react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import Bookings from '../../../src/pages/Bookings';
-import { rest } from 'msw';
-import { server } from '../../mocks/server';
+import { MemoryRouter } from 'react-router-dom';
+import axios from 'axios';
+import Bookings from '../../src/pages/Bookings';
+
+vi.mock('axios');
 
 describe('Bookings Page', () => {
   beforeEach(() => {
     localStorage.setItem('token', 'FAKE_TOKEN_123');
+    vi.resetAllMocks();
   });
 
   afterEach(() => {
@@ -15,28 +18,31 @@ describe('Bookings Page', () => {
   });
 
   it('affiche l’état de chargement puis la liste des réservations', async () => {
-    // Redéfinition de la réponse du serveur pour /bookings/me
-    server.use(
-      rest.get('http://localhost:3000/api/bookings/me', (req, res, ctx) => {
-        return res(
-          ctx.json({
-            success: true,
-            data: [
-              {
-                id: '1',
-                hotel: { name: 'Hotel Test' },
-                checkIn: new Date().toISOString(),
-                checkOut: new Date().toISOString(),
-                status: 'confirmed'
-              }
-            ]
-          })
-        );
-      })
+    axios.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: [
+          {
+            id: '1',
+            hotel: { name: 'Hotel Test' },
+            checkIn: new Date().toISOString(),
+            checkOut: new Date().toISOString(),
+            status: 'confirmed'
+          }
+        ]
+      }
+    });
+
+    render(
+      <MemoryRouter>
+        <Bookings />
+      </MemoryRouter>
     );
-    render(<Bookings />);
+
+    // Vérifier que le message de chargement apparaît
     expect(screen.getByText(/Chargement.../i)).toBeInTheDocument();
 
+    // Attendre que les réservations soient affichées
     await waitFor(() => {
       expect(screen.getByText(/Mes Réservations/i)).toBeInTheDocument();
       expect(screen.getByText(/Hotel Test/i)).toBeInTheDocument();
@@ -44,12 +50,14 @@ describe('Bookings Page', () => {
   });
 
   it("affiche un message d'erreur en cas d'échec de l'API", async () => {
-    server.use(
-      rest.get('http://localhost:3000/api/bookings/me', (req, res, ctx) => {
-        return res(ctx.status(500));
-      })
+    axios.get.mockRejectedValueOnce(new Error('Server error'));
+
+    render(
+      <MemoryRouter>
+        <Bookings />
+      </MemoryRouter>
     );
-    render(<Bookings />);
+
     await waitFor(() => {
       expect(screen.getByText(/Erreur lors du chargement des réservations/i)).toBeInTheDocument();
     });

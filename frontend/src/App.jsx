@@ -7,6 +7,8 @@ import Register from './pages/auth/Register';
 import Profile from './pages/auth/Profile';
 import Hotels from './pages/Hotels';
 import Bookings from './pages/Bookings';
+import CreateBooking from './pages/CreateBooking';
+import AdminHotels from './pages/AdminHotels';
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
           <Route path="profile" element={<Profile />} />
           <Route path="hotels" element={<Hotels />} />
           <Route path="bookings" element={<Bookings />} />
+          <Route path="create-booking" element={<CreateBooking />} />
+          <Route path="admin-hotels" element={<AdminHotels />} />
         </Route>
       </Routes>
     </Router>

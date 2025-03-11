@@ -65,4 +65,49 @@ const userApi = {
   },
 };
 
-export { authApi, userApi };
+/**
+ * Bookings - gestion des réservations
+ */
+const bookingApi = {
+  createBooking: async (payload) => {
+    const response = await apiInstance.post('/bookings', payload);
+    return response.data; // { success, data: { ... } }
+  },
+  updateBooking: async (bookingId, payload) => {
+    const response = await apiInstance.put(`/bookings/${bookingId}`, payload);
+    return response.data; // { success, data: { ... } }
+  },
+  cancelBooking: async (bookingId) => {
+    const response = await apiInstance.put(`/bookings/${bookingId}/cancel`);
+    return response.data; // { success, data: { ... } }
+  },
+};
+
+/**
+ * Hotel
+ */
+
+const hotelApi = {
+  // Liste des hôtels
+  getAllHotels: async () => {
+    const response = await apiInstance.get('/hotels');
+    return response.data; // { success, data: [...], pagination... }
+  },
+  // Créer un hôtel (POST /api/hotels)
+  createHotel: async (hotelPayload) => {
+    const response = await apiInstance.post('/hotels', hotelPayload);
+    return response.data; // { success, data: {...} }
+  },
+  // Mettre à jour un hôtel (PUT /api/hotels/:id)
+  updateHotel: async (hotelId, updatePayload) => {
+    const response = await apiInstance.put(`/hotels/${hotelId}`, updatePayload);
+    return response.data; // { success, data: {...} }
+  },
+  // Supprimer un hôtel (DELETE /api/hotels/:id)
+  deleteHotel: async (hotelId) => {
+    const response = await apiInstance.delete(`/hotels/${hotelId}`);
+    return response.data; // { success, message: ... }
+  },
+};
+
+export { authApi, userApi, bookingApi, hotelApi };

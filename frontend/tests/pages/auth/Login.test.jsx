@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import React from 'react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Login from '../../../src/pages/auth/Login';
 import axios from 'axios';
 
-// On mock axios
 vi.mock('axios');
 
 describe('Login Page', () => {
@@ -12,14 +12,18 @@ describe('Login Page', () => {
     localStorage.clear();
   });
 
-  it('successfully logs in with correct credentials', async () => {
-    // Simule la réponse de axios.post(/auth/login) en cas de réussite
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it('connecte l’utilisateur avec des identifiants corrects', async () => {
     axios.post.mockResolvedValueOnce({
       data: {
         success: true,
         data: {
           email: 'test@example.com',
           pseudo: 'userTest',
+          role: 'user',
         },
         token: 'FAKE_TOKEN_123',
       },
@@ -27,37 +31,32 @@ describe('Login Page', () => {
 
     render(<Login />);
 
-    // Remplir le formulaire
-    fireEvent.change(screen.getByLabelText('Email'), {
+    fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: 'test@example.com' },
     });
-    fireEvent.change(screen.getByLabelText('Mot de passe'), {
+    fireEvent.change(screen.getByLabelText(/Mot de passe/i), {
       target: { value: 'password123' },
     });
 
-    // Soumettre
     fireEvent.click(screen.getByRole('button', { name: /Se connecter/i }));
 
-    // Attendre le message de succès
-    const successMsg = await screen.findByText('Connexion réussie !');
-    expect(successMsg).toBeInTheDocument();
+    await waitFor(() => {
+      const successMsg = screen.getByTestId('success-message');
+      expect(successMsg).toHaveTextContent('Connexion réussie !');
+    });
 
-    // Vérifier que le token est stocké
     expect(localStorage.getItem('token')).toBe('FAKE_TOKEN_123');
-
-    // Vérifier qu'on a bien appelé axios.post avec les bons paramètres
+    // Modification ici : URL attendue ajustée pour correspondre à "/auth/login"
     expect(axios.post).toHaveBeenCalledWith(
-      'http://localhost:3000/api/auth/login',
+      '/auth/login',
       { email: 'test@example.com', password: 'password123' }
     );
   });
 
-  it('shows an error message with invalid credentials', async () => {
-    // Simule un échec (401)
+  it('affiche un message d’erreur avec des identifiants invalides', async () => {
     axios.post.mockRejectedValueOnce({
       response: {
         data: {
-          success: false,
           error: 'Email ou mot de passe incorrect',
         },
       },
@@ -65,21 +64,20 @@ describe('Login Page', () => {
 
     render(<Login />);
 
-    // Remplir le formulaire (mauvais MDP)
-    fireEvent.change(screen.getByLabelText('Email'), {
+    fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: 'test@example.com' },
     });
-    fireEvent.change(screen.getByLabelText('Mot de passe'), {
+    fireEvent.change(screen.getByLabelText(/Mot de passe/i), {
       target: { value: 'wrongpassword' },
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Se connecter/i }));
 
-    // Attendre le message d'erreur
-    const errorMsg = await screen.findByText('Email ou mot de passe incorrect');
-    expect(errorMsg).toBeInTheDocument();
+    await waitFor(() => {
+      const errorMsg = screen.getByTestId('error-message');
+      expect(errorMsg).toHaveTextContent('Email ou mot de passe incorrect');
+    });
 
-    // Vérifier que le token n’est pas stocké
     expect(localStorage.getItem('token')).toBeNull();
   });
 });

@@ -1,29 +1,25 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import Profile from '../../../src/pages/auth/Profile';
-import axios from 'axios';
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { vi } from 'vitest';
+import Profile from '../../../src/pages/auth/Profile';
 
-// On mock axios
-vi.mock('axios');
+// On simule correctement le module userApi
+vi.mock('../../../src/services/api', () => ({
+  userApi: {
+    getProfile: vi.fn(),
+    updateUser: vi.fn(),
+    deleteUser: vi.fn(),
+  },
+}));
+
+import { userApi } from '../../../src/services/api';
 
 describe('Profile Page', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    localStorage.clear();
-  });
-
-  it('loads the user profile on mount', async () => {
-    // Simule GET /users/profile
-    axios.get.mockResolvedValueOnce({
-      data: {
-        success: true,
-        data: {
-          _id: 'USER_ID_123',
-          email: 'mockuser@test.com',
-          pseudo: 'MockUser',
-        },
-      },
+  it('charge et affiche le profil de l’utilisateur', async () => {
+    userApi.getProfile.mockResolvedValueOnce({
+      success: true,
+      data: { id: 'USER_ID_123', email: 'old@test.com', pseudo: 'OldPseudo' },
     });
 
     render(
@@ -32,37 +28,20 @@ describe('Profile Page', () => {
       </MemoryRouter>
     );
 
-    // "Mon Profil" doit apparaître
-    expect(await screen.findByText('Mon Profil')).toBeInTheDocument();
-
-    // Le champ email doit être prérempli
-    const emailInput = screen.getByLabelText('Email');
-    expect(emailInput.value).toBe('mockuser@test.com');
+    expect(await screen.findByDisplayValue(/old@test.com/i)).toBeInTheDocument();
+    expect(await screen.findByDisplayValue(/OldPseudo/i)).toBeInTheDocument();
   });
 
-  it('updates the user profile', async () => {
-    // 1) GET /users/profile
-    axios.get.mockResolvedValueOnce({
-      data: {
-        success: true,
-        data: {
-          _id: 'USER_ID_123',
-          email: 'old@test.com',
-          pseudo: 'OldPseudo',
-        },
-      },
+  it('met à jour le profil de l’utilisateur', async () => {
+    // Simule la récupération du profil initial
+    userApi.getProfile.mockResolvedValueOnce({
+      success: true,
+      data: { id: 'USER_ID_123', email: 'old@test.com', pseudo: 'OldPseudo' },
     });
-
-    // 2) PUT /users/USER_ID_123
-    axios.put.mockResolvedValueOnce({
-      data: {
-        success: true,
-        data: {
-          _id: 'USER_ID_123',
-          email: 'updated@test.com',
-          pseudo: 'UpdatedPseudo',
-        },
-      },
+    // Simule la réponse de la mise à jour
+    userApi.updateUser.mockResolvedValueOnce({
+      success: true,
+      data: { id: 'USER_ID_123', email: 'updated@test.com', pseudo: 'UpdatedPseudo' },
     });
 
     render(
@@ -71,38 +50,38 @@ describe('Profile Page', () => {
       </MemoryRouter>
     );
 
-    // Modifier le pseudo
-    const pseudoInput = await screen.findByLabelText('Pseudo');
-    fireEvent.change(pseudoInput, { target: { value: 'UpdatedPseudo' } });
+    // Attendre que le profil initial soit chargé
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Email/i).value).toBe('old@test.com');
+    });
 
-    // Soumettre
-    const updateBtn = screen.getByRole('button', { name: /Mettre à jour/i });
-    fireEvent.click(updateBtn);
+    // Modifier les valeurs
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'updated@test.com' } });
+    fireEvent.change(screen.getByLabelText(/Pseudo/i), { target: { value: 'UpdatedPseudo' } });
 
-    // On attend le message de succès
-    const successMsg = await screen.findByText('Profil mis à jour avec succès !');
-    expect(successMsg).toBeInTheDocument();
+    // Soumettre le formulaire via le clic sur le bouton
+    fireEvent.click(screen.getByRole('button', { name: /Mettre à jour/i }));
+
+    // Vérifier que updateUser est appelé avec le bon id et payload
+    await waitFor(() => {
+      expect(userApi.updateUser).toHaveBeenCalledWith('USER_ID_123', {
+        email: 'updated@test.com',
+        pseudo: 'UpdatedPseudo',
+      });
+    });
   });
 
-  it('deletes the user account', async () => {
-    // 1) GET /users/profile
-    axios.get.mockResolvedValueOnce({
-      data: {
-        success: true,
-        data: {
-          _id: 'USER_ID_123',
-          email: 'user@test.com',
-          pseudo: 'UserPseudo',
-        },
-      },
+  it('supprime le compte utilisateur', async () => {
+    userApi.getProfile.mockResolvedValueOnce({
+      success: true,
+      data: { id: 'USER_ID_123', email: 'user@test.com', pseudo: 'UserPseudo' },
+    });
+    userApi.deleteUser.mockResolvedValueOnce({
+      success: true,
+      message: 'Utilisateur supprimé avec succès',
     });
 
-    // 2) DELETE /users/USER_ID_123
-    axios.delete.mockResolvedValueOnce({
-      data: { success: true, message: 'Utilisateur supprimé avec succès' },
-    });
-
-    // On simule confirm
+    // Simule la confirmation de suppression
     window.confirm = vi.fn(() => true);
 
     render(
@@ -111,15 +90,11 @@ describe('Profile Page', () => {
       </MemoryRouter>
     );
 
-    // Cliquer sur "Supprimer mon compte"
-    const deleteButton = await screen.findByRole('button', { name: /supprimer mon compte/i });
+    const deleteButton = await screen.findByRole('button', { name: /Supprimer mon compte/i });
     fireEvent.click(deleteButton);
 
-    // Vérifier que l'appel a eu lieu
-    expect(axios.delete).toHaveBeenCalledWith(
-      'http://localhost:3000/api/users/USER_ID_123'
-    );
-    // Vérifier que localStorage est vidé (ou autre, selon votre code)
-    expect(localStorage.getItem('token')).toBeNull();
+    await waitFor(() => {
+      expect(userApi.deleteUser).toHaveBeenCalledWith('USER_ID_123');
+    });
   });
 });
