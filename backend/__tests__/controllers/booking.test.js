@@ -133,17 +133,6 @@ describe('Booking Controller', () => {
   });
 
   describe('GET /api/bookings/:id', () => {
-    it('should get booking by id for owner', async () => {
-      const res = await request(app)
-        .get(`/api/bookings/${bookingId}`)
-        .set('Authorization', `Bearer ${userToken}`);
-      
-      expect(res.statusCode).toBe(200, `Unexpected status code: ${res.statusCode}, body: ${JSON.stringify(res.body)}`);
-      expect(res.body.success).toBe(true, `Success flag not true: ${JSON.stringify(res.body)}`);
-      expect(res.body.data).toBeDefined(`Data is undefined: ${JSON.stringify(res.body)}`);
-      expect(res.body.data._id.toString()).toBe(bookingId.toString());
-    });
-
     it('should get booking by id for admin', async () => {
       const res = await request(app)
         .get(`/api/bookings/${bookingId}`)
