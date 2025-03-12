@@ -73,15 +73,24 @@ const hotelController = {
   // Créer un nouvel hôtel (admin uniquement)
   async createHotel(req, res, next) {
     try {
-      const { name, location, description, picture_list } = req.body;
-
+      const { name, location, description } = req.body;
+  
+      // Validation des champs requis
+      if (!name || !location || !description) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nom, localisation et description sont requis'
+        });
+      }
+  
+      // Création de l'hôtel
       const hotel = await Hotel.create({
-        name,
-        location,
-        description,
-        picture_list
+        name: name.trim(),
+        location: location.trim(),
+        description: description.trim(),
+        picture_list: req.files ? req.files.map(file => file.path) : []
       });
-
+  
       res.status(201).json({
         success: true,
         data: hotel

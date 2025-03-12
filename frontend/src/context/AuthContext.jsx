@@ -27,14 +27,14 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = (userData, token) => {
-    if (!userData || !token) {
-      console.error('Données de connexion invalides');
-      return;
+  const login = async (userData, token) => {
+    try {
+      localStorage.setItem('token', token);
+      setUser(userData);
+    } catch (error) {
+      console.error('Erreur lors de la connexion:', error);
+      throw error;
     }
-    localStorage.setItem('token', token);
-    setUser(userData);
-    console.log('Utilisateur connecté:', userData); // Pour déboguer
   };
 
   const logout = () => {
