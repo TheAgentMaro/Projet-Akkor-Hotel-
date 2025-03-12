@@ -80,6 +80,9 @@ describe('Booking Controller', () => {
       hotel: hotelId
     });
     bookingId = booking._id;
+    
+    // Afficher les informations pour le débogage
+    console.log(`Test setup: userId=${userId}, bookingId=${bookingId}, booking.user=${booking.user}`);
   });
 
   describe('POST /api/bookings', () => {
@@ -137,9 +140,10 @@ describe('Booking Controller', () => {
       const res = await request(app)
         .get(`/api/bookings/${bookingId}`)
         .set('Authorization', `Bearer ${userToken}`);
-
+    
       expect(res.statusCode).toBe(200);
-      expect(res.body.data.id).toBe(bookingId.toString());
+      expect(res.body.success).toBe(true);
+      expect(res.body.data._id.toString()).toBe(bookingId.toString()); // Ajustez ici
     });
 
     it('should get booking by id for admin', async () => {
@@ -161,8 +165,9 @@ describe('Booking Controller', () => {
           numberOfGuests: 3,
           specialRequests: 'Updated request'
         });
-
+    
       expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
       expect(res.body.data.numberOfGuests).toBe(3);
       expect(res.body.data.specialRequests).toBe('Updated request');
     });

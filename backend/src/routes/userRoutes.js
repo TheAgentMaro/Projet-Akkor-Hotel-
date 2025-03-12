@@ -16,11 +16,11 @@ router.get('/me', userController.getProfile);
 router.put('/me', validator.validateUserUpdate, userController.updateUser);
 router.delete('/me', userController.deleteUser);
 
-// Routes pour employés et admins (recherche et consultation des utilisateurs)
-router.get('/search', adminOrEmployee, userController.getAllUsers); // Utiliser getAllUsers comme recherche
+// Routes pour employés et admins
+router.get('/search', adminOrEmployee, userController.getAllUsers);
 router.get('/:id', adminOrEmployee, userController.getUserById);
 
-// Routes admin uniquement (gestion complète des utilisateurs)
+// Routes admin uniquement
 router.get('/', admin, userController.getAllUsers);
 router.put('/:id', admin, validator.validateUserUpdate, userController.updateUser);
 router.delete('/:id', admin, userController.deleteUser);

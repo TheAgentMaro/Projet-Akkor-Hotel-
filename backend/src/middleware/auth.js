@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const createError = require('http-errors');
+const authController = require('../controllers/authController'); // Importez authController
 
 /**
  * Middleware de protection des routes
@@ -16,19 +17,36 @@ const protect = async (req, res, next) => {
       throw createError(401, 'Accès refusé. Veuillez vous connecter pour accéder à cette ressource.');
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // En environnement de test, on peut accepter directement le token décodé
+    // Vérifier si le token est blacklisté
+    if (authController.isTokenBlacklisted(token)) {
+      throw createError(401, 'Session invalide. Token révoqué suite à une déconnexion.');
+    }
+
+    // Décoder le token
+    const jwtSecret = process.env.JWT_SECRET || 'supinfo';
+    const decoded = jwt.verify(token, jwtSecret);
+
+    // En environnement de test, on accepte directement le token décodé sans vérifier l'existence de l'utilisateur
     if (process.env.NODE_ENV === 'test') {
       req.user = {
         _id: decoded.id,
         id: decoded.id,
-        role: decoded.role
+        role: decoded.role || 'user',
+        toString: function() {
+          return this.id.toString();
+        },
+        toObject: function() {
+          return {
+            _id: this._id,
+            id: this.id,
+            role: this.role
+          };
+        }
       };
       return next();
     }
     
-    // En production et développement, on vérifie que l'utilisateur existe
+    // En production et développement, vérifier que l'utilisateur existe
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) {
@@ -116,12 +134,10 @@ const checkResourceAccess = (resourceField = 'userId') => {
       });
     }
 
-    // Admin et employé ont accès à toutes les ressources
     if (['admin', 'employee'].includes(req.user.role)) {
       return next();
     }
 
-    // Pour les utilisateurs normaux, vérifier qu'ils sont propriétaires de la ressource
     const resourceId = req.params[resourceField] || req.body[resourceField];
     if (resourceId && resourceId.toString() === req.user._id.toString()) {
       return next();

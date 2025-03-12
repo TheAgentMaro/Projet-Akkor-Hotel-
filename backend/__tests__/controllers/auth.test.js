@@ -104,16 +104,16 @@ describe('Auth Controller', () => {
       const res = await request(app)
         .post('/api/auth/logout')
         .set('Authorization', `Bearer ${token}`);
-
+    
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.message).toBe('Déconnexion réussie');
-
+    
       // Vérifier que le token est maintenant invalide
       const protectedRes = await request(app)
         .get('/api/users/profile')
         .set('Authorization', `Bearer ${token}`);
-
+    
       expect(protectedRes.statusCode).toBe(401);
     });
 
