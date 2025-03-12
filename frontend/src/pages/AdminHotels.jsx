@@ -65,6 +65,21 @@ function AdminHotels() {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
+    
+    // Vérifier le nombre d'images
+    if (files.length > 5) {
+      setError('Vous ne pouvez pas uploader plus de 5 images');
+      return;
+    }
+
+    // Vérifier la taille des images (max 5MB par image)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const oversizedFiles = files.filter(file => file.size > maxSize);
+    if (oversizedFiles.length > 0) {
+      setError('Les images ne doivent pas dépasser 5MB chacune');
+      return;
+    }
+
     const newImagePreview = [];
     const newPictures = [];
 
@@ -82,6 +97,9 @@ function AdminHotels() {
       ...prev,
       pictures: [...prev.pictures, ...newPictures]
     }));
+    
+    // Effacer le message d'erreur si tout est ok
+    setError('');
   };
 
   const removeImage = (index) => {
@@ -102,6 +120,12 @@ function AdminHotels() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Empêcher la soumission si déjà en cours
+    if (loading) {
+      return;
+    }
+    
     setError(''); // Reset error
     setSuccessMessage(''); // Reset success message
     try {
@@ -120,6 +144,7 @@ function AdminHotels() {
         return;
       }
 
+      setLoading(true);
       const formDataToSend = new FormData();
       formDataToSend.append('name', name);
       formDataToSend.append('location', location);
@@ -142,18 +167,21 @@ function AdminHotels() {
       if (response.success) {
         setSuccessMessage(response.message || 'Hôtel créé avec succès');
         resetForm();
-        loadHotels();
+        await loadHotels(); // Attendre que les hôtels soient rechargés
       } else {
-        throw new Error(response.error || 'Erreur lors de la création');
+        setError(response.error || 'Erreur lors de la création');
       }
     } catch (error) {
       console.error('Erreur complète:', error);
-      console.error('Erreur détaillée:', {
-        message: error.response?.data?.error || error.message,
-        data: error.response?.data,
-        status: error.response?.status
-      });
-      setError(error.response?.data?.error || error.message || 'Erreur lors de la création de l\'hôtel');
+      if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else if (error.message) {
+        setError(error.message);
+      } else {
+        setError('Une erreur est survenue lors de la création de l\'hôtel');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
