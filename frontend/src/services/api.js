@@ -165,13 +165,25 @@ export const userApi = {
   // Employee : Rechercher des utilisateurs
   searchUsers: async (query) => {
     try {
+      if (!query || query.trim() === '') {
+        return {
+          success: false,
+          error: 'Veuillez saisir un terme de recherche',
+          data: []
+        };
+      }
+      
       const response = await axiosInstance.get('/users/search', {
         params: { query }
       });
       return response;
     } catch (error) {
       console.error('Erreur searchUsers:', error);
-      throw error;
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Erreur lors de la recherche des utilisateurs',
+        data: []
+      };
     }
   },
 

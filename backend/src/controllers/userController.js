@@ -172,15 +172,37 @@ const userController = {
     }
   },
 
-  // Liste des utilisateurs (admin uniquement)
+  // Liste des utilisateurs (admin uniquement) ou recherche (admin/employé)
   async getAllUsers(req, res, next) {
     try {
+      // Vérifier si c'est une requête de recherche
+      const isSearchRequest = req.path === '/search' || req.query.query;
+      
       // Vérifier les permissions
-      if (req.user.role !== 'admin') {
+      if (!isSearchRequest && req.user.role !== 'admin') {
         throw createError(403, 'Non autorisé - Réservé aux administrateurs');
       }
+      
+      // Si c'est une recherche, vérifier que l'utilisateur est admin ou employé
+      if (isSearchRequest && !['admin', 'employee'].includes(req.user.role)) {
+        throw createError(403, 'Non autorisé - Réservé aux administrateurs et employés');
+      }
 
-      const users = await User.find();
+      // Construire la requête de recherche si nécessaire
+      let query = {};
+      if (isSearchRequest && req.query.query) {
+        const searchTerm = req.query.query.trim();
+        // Recherche insensible à la casse sur email et pseudo
+        query = {
+          $or: [
+            { email: { $regex: searchTerm, $options: 'i' } },
+            { pseudo: { $regex: searchTerm, $options: 'i' } }
+          ]
+        };
+      }
+
+      const users = await User.find(query);
+      
       res.json({
         success: true,
         data: users.map(user => user.toJSON())
