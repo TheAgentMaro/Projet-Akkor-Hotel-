@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
+    "akkor-hotel-backend": "file:",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
