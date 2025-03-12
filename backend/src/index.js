@@ -42,7 +42,6 @@ app.use('/api/bookings', bookingRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-
 // Route racine
 app.get('/', (req, res) => {
   res.redirect('/api-docs');

@@ -17,7 +17,8 @@ axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Ne pas ajouter "Bearer" si c'est déjà présent
+      config.headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     }
     return config;
   },
@@ -28,14 +29,35 @@ axiosInstance.interceptors.request.use(
 
 // Intercepteur pour les réponses
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Standardiser la structure de la réponse
+    const standardResponse = {
+      success: true,
+      data: response.data.data,
+      token: response.data.token,
+      message: response.data.message
+    };
+
+    // Si la réponse n'a pas de data.data mais a un data, utiliser data directement
+    if (!response.data.data && response.data) {
+      standardResponse.data = response.data;
+    }
+
+    return standardResponse;
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
-    return Promise.reject(error);
+    return Promise.reject({
+      success: false,
+      error: error.response?.data?.message || error.message,
+      status: error.response?.status
+    });
   }
 );
 
@@ -48,13 +70,8 @@ export const authApi = {
         password,
       });
       
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-      }
-      
-      return response.data;
+      // La réponse est déjà standardisée par l'intercepteur
+      return response;
     } catch (error) {
       console.error('Erreur login:', error);
       throw error;

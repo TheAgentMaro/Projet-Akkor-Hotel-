@@ -56,30 +56,17 @@ function Login() {
   
       const response = await authApi.login(data.email, data.password);
       
-      // Debug pour voir la structure exacte de la réponse
-      console.log('Response structure:', response);
-      
-      if (response && response.token) {
-        // Si le token est directement dans la réponse
-        await login(response.user || response, response.token);
+      if (response.success && response.data && response.token) {
+        await login(response.data, response.token);
         setSuccessMessage('Connexion réussie !');
         reset();
-        setTimeout(() => {
-          navigate(from, { replace: true });
-        }, 1500);
-      } else if (response && response.data && response.data.token) {
-        // Si le token est dans response.data
-        await login(response.data.user, response.data.token);
-        setSuccessMessage('Connexion réussie !');
-        reset();
-        setTimeout(() => {
-          navigate(from, { replace: true });
-        }, 1500);
+        // Redirection immédiate
+        navigate(from, { replace: true });
       } else {
         throw new Error('Structure de réponse invalide');
       }
     } catch (error) {
-      console.error('Erreur de connexion détaillée:', error);
+      console.error('Erreur de connexion:', error);
       setErrorMessage(
         error.response?.data?.message || 
         error.message || 

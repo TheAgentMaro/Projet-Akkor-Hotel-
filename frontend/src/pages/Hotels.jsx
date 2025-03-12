@@ -84,10 +84,11 @@ function Hotels() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {hotels.map((hotel) => (
-          <div key={hotel._id} className="bg-white rounded-lg shadow-lg overflow-hidden">
+        {hotels.map((hotel, index) => (
+          <div key={`hotel-${hotel._id || index}`} className="bg-white rounded-lg shadow-lg overflow-hidden">
             {hotel.images && hotel.images.length > 0 && (
               <img
+                key={`hotel-img-${hotel._id || index}`}
                 src={`${import.meta.env.VITE_API_URL}/uploads/${hotel.images[0]}`}
                 alt={hotel.name}
                 className="w-full h-48 object-cover"
