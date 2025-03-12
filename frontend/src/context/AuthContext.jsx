@@ -12,43 +12,39 @@ export const AuthProvider = ({ children }) => {
   // Vérifier l'authentification au chargement
   useEffect(() => {
     const initializeAuth = async () => {
-      const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
+      try {
+        const token = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
 
-      if (token && storedUser) {
-        try {
+        if (token && storedUser) {
           // Configurer le token dans Axios
           const tokenWithBearer = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
           
           // Vérifier si l'utilisateur est toujours valide
           const response = await userApi.getProfile();
+          
           if (response.success && response.data) {
-            setUser(response.data);
+            const userData = response.data;
+            setUser(userData);
             setIsAuthenticated(true);
-            localStorage.setItem('user', JSON.stringify(response.data));
+            localStorage.setItem('user', JSON.stringify(userData));
           } else {
             // Si la réponse n'est pas valide, nettoyer le stockage
-            handleLogout('Session expirée. Veuillez vous reconnecter.');
+            handleLogout('Session expirée');
           }
-        } catch (error) {
-          console.error('Erreur lors de la récupération du profil:', error);
-          handleLogout(error.message || 'Erreur de connexion. Veuillez vous reconnecter.');
         }
-      } else {
-        handleLogout();
+      } catch (error) {
+        console.error('Erreur lors de la récupération du profil:', error);
+        handleLogout('Erreur de connexion');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-  
+
     initializeAuth();
   }, []);
 
   const handleLogout = (errorMessage = null) => {
-    // Double confirmation pour la déconnexion si ce n'est pas dû à une erreur
-    if (!errorMessage && !confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
-      return;
-    }
-
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
@@ -73,7 +69,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
 
       // Redirection intelligente selon le rôle
-      const redirectPath = localStorage.getItem('redirectPath') || getRoleDefaultPath(userData.role);
+      const redirectPath = localStorage.getItem('redirectPath') || '/';
       localStorage.removeItem('redirectPath');
       window.location.href = redirectPath;
     } catch (error) {

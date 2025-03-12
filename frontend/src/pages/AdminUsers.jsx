@@ -12,6 +12,41 @@ const userSchema = yup.object().shape({
 });
 
 function AdminUsers() {
+  // Fonctions utilitaires pour les badges de rôle
+  const getRoleBadgeColor = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-red-100 text-red-800';
+      case 'employee':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-green-100 text-green-800';
+    }
+  };
+
+  const getRoleLabel = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrateur';
+      case 'employee':
+        return 'Employé';
+      default:
+        return 'Utilisateur';
+    }
+  };
+
+  const getBookingStatusColor = (status) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
   const { user, hasRole, roleBadgeColor, roleLabel } = useContext(AuthContext);
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
@@ -199,6 +234,201 @@ function AdminUsers() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Liste des utilisateurs */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">Liste des utilisateurs</h3>
+          </div>
+          <ul className="divide-y divide-gray-200">
+            {users.map((u) => (
+              <li
+                key={u.id}
+                className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150 ${selectedUser?.id === u.id ? 'bg-blue-50' : ''}`}
+                onClick={() => handleUserSelect(u)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-500 font-medium">{u.pseudo[0].toUpperCase()}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{u.pseudo}</p>
+                      <p className="text-sm text-gray-500">{u.email}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(u.role)}`}>
+                      {getRoleLabel(u.role)}
+                    </span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Détails de l'utilisateur sélectionné */}
+        {selectedUser && (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Détails de l'utilisateur</h3>
+            </div>
+            <div className="p-6 space-y-6">
+              {editMode ? (
+                <form onSubmit={handleEditSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    {formErrors.email && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Pseudo</label>
+                    <input
+                      type="text"
+                      name="pseudo"
+                      value={editForm.pseudo}
+                      onChange={(e) => setEditForm({ ...editForm, pseudo: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                    {formErrors.pseudo && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.pseudo}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nouveau mot de passe</label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={editForm.password}
+                      onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      placeholder="Laisser vide pour ne pas modifier"
+                    />
+                    {formErrors.password && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
+                    )}
+                  </div>
+
+                  {user.id !== selectedUser.id && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Rôle</label>
+                      <select
+                        name="role"
+                        value={editForm.role}
+                        onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="user">Utilisateur</option>
+                        <option value="employee">Employé</option>
+                        <option value="admin">Administrateur</option>
+                      </select>
+                      {formErrors.role && (
+                        <p className="mt-1 text-sm text-red-600">{formErrors.role}</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditMode(false);
+                        setFormErrors({});
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      Enregistrer
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Informations générales</h4>
+                    <dl className="mt-2 divide-y divide-gray-200">
+                      <div className="py-3 flex justify-between">
+                        <dt className="text-sm font-medium text-gray-500">Email</dt>
+                        <dd className="text-sm text-gray-900">{selectedUser.email}</dd>
+                      </div>
+                      <div className="py-3 flex justify-between">
+                        <dt className="text-sm font-medium text-gray-500">Pseudo</dt>
+                        <dd className="text-sm text-gray-900">{selectedUser.pseudo}</dd>
+                      </div>
+                      <div className="py-3 flex justify-between">
+                        <dt className="text-sm font-medium text-gray-500">Rôle</dt>
+                        <dd>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(selectedUser.role)}`}>
+                            {getRoleLabel(selectedUser.role)}
+                          </span>
+                        </dd>
+                      </div>
+                      <div className="py-3 flex justify-between">
+                        <dt className="text-sm font-medium text-gray-500">Date d'inscription</dt>
+                        <dd className="text-sm text-gray-900">{formatDate(selectedUser.createdAt)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+
+                  {userBookings.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">Réservations</h4>
+                      <ul className="mt-2 divide-y divide-gray-200">
+                        {userBookings.map((booking) => (
+                          <li key={booking.id} className="py-3">
+                            <div className="flex justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{booking.hotel.name}</p>
+                                <p className="text-sm text-gray-500">{formatDate(booking.checkIn)} - {formatDate(booking.checkOut)}</p>
+                              </div>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBookingStatusColor(booking.status)}`}>
+                                {booking.status}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={() => setEditMode(true)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Modifier
+                    </button>
+                    {user.id !== selectedUser.id && (
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                      >
+                        Supprimer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {/* Liste des utilisateurs */}
         <div className="bg-white shadow-lg rounded-lg overflow-hidden">
           <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">

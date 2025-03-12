@@ -1,5 +1,5 @@
 // src/pages/AdminHotels.jsx
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useRef } from 'react';
 import { hotelApi } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
@@ -11,6 +11,7 @@ function AdminHotels() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const formRef = useRef(null);
   const [pagination, setPagination] = useState({
     current: 1,
     limit: 10,
@@ -34,8 +35,10 @@ function AdminHotels() {
   const [imagePreview, setImagePreview] = useState([]);
 
   useEffect(() => {
-    loadHotels();
-  }, [pagination.current, sortField, sortOrder]);
+    if (user?.role === 'admin') {
+      loadHotels();
+    }
+  }, [user, pagination.current, sortField, sortOrder]);
 
   async function loadHotels() {
     try {
@@ -201,7 +204,7 @@ function AdminHotels() {
 
   function startEdit(hotel) {
     setEditMode(true);
-    setEditHotelId(hotel.id);
+    setEditHotelId(hotel._id);
     setFormData({
       name: hotel.name,
       location: hotel.location,
@@ -268,7 +271,7 @@ function AdminHotels() {
         {/* Liste des hôtels */}
         <ul className="space-y-4">
           {hotels.map((hotel) => (
-            <li key={hotel.id} className="bg-white p-4 rounded shadow">
+            <li key={hotel._id} className="bg-white p-4 rounded shadow">
               <div className="flex flex-wrap gap-4 mb-4">
                 {hotel.picture_list?.map((pic, index) => (
                   <img
@@ -290,7 +293,7 @@ function AdminHotels() {
                   Éditer
                 </button>
                 <button
-                  onClick={() => handleDeleteHotel(hotel.id)}
+                  onClick={() => handleDeleteHotel(hotel._id)}
                   className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
                 >
                   Supprimer
