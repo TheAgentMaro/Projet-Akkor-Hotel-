@@ -8,6 +8,7 @@ const connectDB = require('./config/database');
 const createError = require('http-errors');
 
 const app = express();
+const path = require('path');
 
 // Middleware
 app.use(cors());
@@ -38,6 +39,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/bookings', bookingRoutes);
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // Route racine
 app.get('/', (req, res) => {

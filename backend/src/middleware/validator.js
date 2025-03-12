@@ -59,25 +59,42 @@ const validator = {
   },
 
   validateHotelCreate(req, res, next) {
-    const { name, location, description } = req.body;
-
-    if (!name || !location || !description) {
-      return next(createError(400, 'Nom, localisation et description sont requis'));
+    try {
+      console.log('Validation body:', req.body); // Debug log
+      console.log('Files:', req.files); // Debug log
+  
+      const { name, location, description } = req.body;
+  
+      // Vérification plus précise des champs
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Le nom est requis'
+        });
+      }
+  
+      if (!location || typeof location !== 'string' || location.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'La localisation est requise'
+        });
+      }
+  
+      if (!description || typeof description !== 'string' || description.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'La description est requise'
+        });
+      }
+  
+      next();
+    } catch (error) {
+      console.error('Erreur validation:', error);
+      res.status(400).json({
+        success: false,
+        error: 'Erreur de validation des données'
+      });
     }
-
-    if (name.length < 2) {
-      return next(createError(400, 'Le nom doit contenir au moins 2 caractères'));
-    }
-
-    if (location.length < 2) {
-      return next(createError(400, 'La localisation doit contenir au moins 2 caractères'));
-    }
-
-    if (description.length < 10) {
-      return next(createError(400, 'La description doit contenir au moins 10 caractères'));
-    }
-
-    next();
   },
 
   validateHotelUpdate(req, res, next) {

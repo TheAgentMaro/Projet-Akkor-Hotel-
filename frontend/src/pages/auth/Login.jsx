@@ -1,17 +1,22 @@
-import React, { useState, useContext } from 'react'; // Ajouter useContext ici
+// src/pages/auth/Login.jsx
+import React, { useState, useContext, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Yup from 'yup';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../../services/api';
 import AuthContext from '../../context/AuthContext';
 
 function Login() {
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext); // Maintenant useContext est défini
+  const location = useLocation();
+  const { login } = useContext(AuthContext);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Redirection après login
+  const from = location.state?.from?.pathname || '/';
 
   const validationSchema = Yup.object().shape({
     email: Yup.string()
@@ -26,9 +31,22 @@ function Login() {
     register,
     handleSubmit,
     formState: { errors },
+    reset
   } = useForm({
     resolver: yupResolver(validationSchema),
+    defaultValues: {
+      email: '',
+      password: ''
+    }
   });
+
+  // Réinitialiser les messages d'erreur/succès quand le composant est démonté
+  useEffect(() => {
+    return () => {
+      setErrorMessage('');
+      setSuccessMessage('');
+    };
+  }, []);
 
   const onSubmit = async (data) => {
     try {
@@ -37,31 +55,35 @@ function Login() {
       setSuccessMessage('');
   
       const response = await authApi.login(data.email, data.password);
-      console.log('Réponse API:', response); // Pour déboguer
       
-      if (response.success && response.data) {
-        // S'assurer que nous avons les bonnes données
-        const userData = response.data.user || response.data;
-        const token = response.data.token || response.token;
-        
-        if (!userData || !token) {
-          throw new Error('Données de connexion invalides');
-        }
-  
-        // Mettre à jour le contexte avec les données utilisateur
-        login(userData, token);
-        
+      // Debug pour voir la structure exacte de la réponse
+      console.log('Response structure:', response);
+      
+      if (response && response.token) {
+        // Si le token est directement dans la réponse
+        await login(response.user || response, response.token);
         setSuccessMessage('Connexion réussie !');
+        reset();
         setTimeout(() => {
-          navigate('/');
+          navigate(from, { replace: true });
+        }, 1500);
+      } else if (response && response.data && response.data.token) {
+        // Si le token est dans response.data
+        await login(response.data.user, response.data.token);
+        setSuccessMessage('Connexion réussie !');
+        reset();
+        setTimeout(() => {
+          navigate(from, { replace: true });
         }, 1500);
       } else {
-        throw new Error('Erreur de connexion');
+        throw new Error('Structure de réponse invalide');
       }
     } catch (error) {
-      console.error('Erreur de connexion:', error);
+      console.error('Erreur de connexion détaillée:', error);
       setErrorMessage(
-        error.response?.data?.message || error.message || 'Erreur lors de la connexion'
+        error.response?.data?.message || 
+        error.message || 
+        'Identifiants invalides'
       );
     } finally {
       setIsLoading(false);
@@ -95,8 +117,11 @@ function Login() {
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
                 {...register('email')}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  errors.email ? 'border-red-300' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                 placeholder="exemple@email.com"
               />
               {errors.email && (
@@ -113,8 +138,11 @@ function Login() {
               <input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 {...register('password')}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
+                  errors.password ? 'border-red-300' : 'border-gray-300'
+                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
                 placeholder="••••••••"
               />
               {errors.password && (

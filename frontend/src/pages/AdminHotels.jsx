@@ -98,46 +98,53 @@ function AdminHotels() {
     }));
   };
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const formDataToSend = new FormData();
+      // Debug des données du formulaire
+      console.log('FormData initial:', formData);
       
-      // Vérification des champs requis
-      if (!formData.name || !formData.location || !formData.description) {
-        setError("Tous les champs sont obligatoires");
+      // Validation côté client plus stricte
+      const name = formData.name?.trim();
+      const location = formData.location?.trim();
+      const description = formData.description?.trim();
+      
+      console.log('Valeurs après trim:', { name, location, description });
+  
+      if (!name || !location || !description) {
+        setError('Tous les champs sont obligatoires');
         return;
       }
   
-      formDataToSend.append('name', formData.name.trim());
-      formDataToSend.append('location', formData.location.trim());
-      formDataToSend.append('description', formData.description.trim());
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', name);
+      formDataToSend.append('location', location);
+      formDataToSend.append('description', description);
+  
+      // Debug du FormData avant envoi
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(`FormData avant envoi - ${key}:`, value);
+      }
+  
+      const response = await hotelApi.createHotel(formDataToSend);
       
-      // Ajout des images
-      if (formData.pictures && formData.pictures.length > 0) {
-        formData.pictures.forEach(pic => {
-          formDataToSend.append('picture_list', pic);
-        });
-      }
-  
-      let response;
-      if (editMode) {
-        response = await hotelApi.updateHotel(editHotelId, formDataToSend);
-      } else {
-        response = await hotelApi.createHotel(formDataToSend);
-      }
-  
       if (response.success) {
+        setSuccessMessage(response.message || 'Hôtel créé avec succès');
         resetForm();
         loadHotels();
       } else {
-        setError(response.message || "Une erreur est survenue");
+        throw new Error(response.error || 'Erreur lors de la création');
       }
-    } catch (err) {
-      console.error('Erreur handleSubmit:', err);
-      setError(err.response?.data?.message || `Erreur lors de ${editMode ? 'la mise à jour' : 'la création'} de l'hôtel.`);
+    } catch (error) {
+      console.error('Erreur complète:', error);
+      console.error('Erreur détaillée:', {
+        message: error.response?.data?.error || error.message,
+        data: error.response?.data,
+        status: error.response?.status
+      });
+      setError(error.response?.data?.error || error.message || 'Erreur lors de la création de l\'hôtel');
     }
-  }
+  };
 
   const resetForm = () => {
     setFormData({

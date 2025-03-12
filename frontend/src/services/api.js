@@ -3,107 +3,209 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Configuration d'Axios avec le token
-axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`; // Assurez-vous que le format est correct
+// Configuration initiale d'Axios
+const axiosInstance = axios.create({
+  baseURL: API_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json'
   }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
 });
+
+// Intercepteur pour les requêtes
+axiosInstance.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Intercepteur pour les réponses
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 // API pour l'authentification
 export const authApi = {
   login: async (email, password) => {
-    const response = await axios.post(`${API_URL}/auth/login`, {
-      email,
-      password,
-    });
-    return response.data;
+    try {
+      const response = await axiosInstance.post('/auth/login', {
+        email,
+        password,
+      });
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Erreur login:', error);
+      throw error;
+    }
   },
 
   register: async (userData) => {
-    const response = await axios.post(`${API_URL}/auth/register`, userData);
-    return response.data;
+    try {
+      const response = await axiosInstance.post('/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur register:', error);
+      throw error;
+    }
   },
 
   logout: () => {
     localStorage.removeItem('token');
+    delete axiosInstance.defaults.headers.common['Authorization'];
   },
 };
 
 // API pour les utilisateurs
 export const userApi = {
   getProfile: async () => {
-    const response = await axios.get(`${API_URL}/users/profile`);
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/users/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Erreur getProfile:', error);
+      throw error;
+    }
   },
 
   updateProfile: async (userData) => {
-    const response = await axios.put(`${API_URL}/users/profile`, userData);
-    return response.data;
+    try {
+      const response = await axiosInstance.put('/users/profile', userData);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur updateProfile:', error);
+      throw error;
+    }
   },
 };
 
 // API pour les hôtels
 export const hotelApi = {
   getAllHotels: async ({ page = 1, limit = 10, sort = 'createdAt', order = 'desc' } = {}) => {
-    const response = await axios.get(`${API_URL}/hotels`, {
-      params: { page, limit, sort, order }
-    });
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/hotels', {
+        params: { page, limit, sort, order }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erreur getAllHotels:', error);
+      throw error;
+    }
   },
 
   getHotelById: async (id) => {
-    const response = await axios.get(`${API_URL}/hotels/${id}`);
-    return response.data;
+    try {
+      const response = await axiosInstance.get(`/hotels/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur getHotelById:', error);
+      throw error;
+    }
   },
 
   createHotel: async (formData) => {
-    const response = await axios.post(`${API_URL}/hotels`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
+    try {
+      // Debug des données envoyées
+      for (let [key, value] of formData.entries()) {
+        console.log('FormData:', key, value);
       }
-    });
-    return response.data;
+
+      const response = await axiosInstance.post('/hotels', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Erreur createHotel:', error.response?.data);
+      throw error;
+    }
   },
 
   updateHotel: async (id, formData) => {
-    const response = await axios.put(`${API_URL}/hotels/${id}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    return response.data;
+    try {
+      const response = await axiosInstance.put(`/hotels/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erreur updateHotel:', error);
+      throw error;
+    }
   },
 
   deleteHotel: async (id) => {
-    const response = await axios.delete(`${API_URL}/hotels/${id}`);
-    return response.data;
+    try {
+      const response = await axiosInstance.delete(`/hotels/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur deleteHotel:', error);
+      throw error;
+    }
   },
 };
 
 // API pour les réservations
 export const bookingApi = {
   getAllBookings: async () => {
-    const response = await axios.get(`${API_URL}/bookings`);
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/bookings');
+      return response.data;
+    } catch (error) {
+      console.error('Erreur getAllBookings:', error);
+      throw error;
+    }
   },
 
   createBooking: async (bookingData) => {
-    const response = await axios.post(`${API_URL}/bookings`, bookingData);
-    return response.data;
+    try {
+      const response = await axiosInstance.post('/bookings', bookingData);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur createBooking:', error);
+      throw error;
+    }
   },
 
   updateBooking: async (id, bookingData) => {
-    const response = await axios.put(`${API_URL}/bookings/${id}`, bookingData);
-    return response.data;
+    try {
+      const response = await axiosInstance.put(`/bookings/${id}`, bookingData);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur updateBooking:', error);
+      throw error;
+    }
   },
 
   deleteBooking: async (id) => {
-    const response = await axios.delete(`${API_URL}/bookings/${id}`);
-    return response.data;
+    try {
+      const response = await axiosInstance.delete(`/bookings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur deleteBooking:', error);
+      throw error;
+    }
   },
 };

@@ -73,58 +73,85 @@ const hotelController = {
   // Créer un nouvel hôtel (admin uniquement)
   async createHotel(req, res, next) {
     try {
-      const { name, location, description } = req.body;
+      console.log('Create Hotel - Body reçu:', req.body);
+      console.log('Create Hotel - Files reçus:', req.files);
   
-      // Validation des champs requis
-      if (!name || !location || !description) {
-        return res.status(400).json({
-          success: false,
-          message: 'Nom, localisation et description sont requis'
-        });
-      }
+      const { name, location, description } = req.body;
   
       // Création de l'hôtel
       const hotel = await Hotel.create({
         name: name.trim(),
         location: location.trim(),
         description: description.trim(),
-        picture_list: req.files ? req.files.map(file => file.path) : []
+        picture_list: req.files ? req.files.map(file => `/uploads/${file.filename}`) : []
       });
   
       res.status(201).json({
         success: true,
-        data: hotel
+        data: hotel,
+        message: 'Hôtel créé avec succès'
       });
     } catch (error) {
-      next(error);
+      console.error('Erreur création hôtel:', error);
+      res.status(400).json({
+        success: false,
+        error: error.message || 'Erreur lors de la création de l\'hôtel'
+      });
     }
   },
 
   // Mettre à jour un hôtel (admin uniquement)
   async updateHotel(req, res, next) {
     try {
-      const { name, location, description, picture_list } = req.body;
-
-      const hotel = await Hotel.findByIdAndUpdate(
-        req.params.id,
-        {
-          name,
-          location,
-          description,
-          picture_list
-        },
-        { new: true, runValidators: true }
-      );
-
-      if (!hotel) {
+      console.log('Body reçu pour update:', req.body);
+      console.log('Files reçus pour update:', req.files);
+  
+      // Récupérer l'hôtel existant
+      const existingHotel = await Hotel.findById(req.params.id);
+      if (!existingHotel) {
         throw createError(404, 'Hôtel non trouvé');
       }
-
+  
+      // Préparer l'objet de mise à jour
+      const updateData = {};
+  
+      // Mettre à jour les champs texte seulement s'ils sont fournis
+      if (req.body.name) updateData.name = req.body.name.trim();
+      if (req.body.location) updateData.location = req.body.location.trim();
+      if (req.body.description) updateData.description = req.body.description.trim();
+  
+      // Gérer les images
+      if (req.files && req.files.length > 0) {
+        // Ajouter les nouvelles images
+        const newImages = req.files.map(file => `/uploads/${file.filename}`);
+        
+        // Si keepExistingImages est true dans le body, combiner avec les images existantes
+        if (req.body.keepExistingImages === 'true') {
+          updateData.picture_list = [...existingHotel.picture_list, ...newImages];
+        } else {
+          updateData.picture_list = newImages;
+        }
+      } else if (req.body.picture_list) {
+        // Si picture_list est fourni dans le body (pour supprimer ou réorganiser les images existantes)
+        updateData.picture_list = Array.isArray(req.body.picture_list) 
+          ? req.body.picture_list 
+          : JSON.parse(req.body.picture_list);
+      }
+  
+      // Effectuer la mise à jour
+      const hotel = await Hotel.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+      );
+  
       res.json({
         success: true,
-        data: hotel
+        data: hotel,
+        message: 'Hôtel mis à jour avec succès'
       });
     } catch (error) {
+      console.error('Erreur mise à jour hôtel:', error);
       next(error);
     }
   },
