@@ -53,7 +53,7 @@ Le projet Akkor Hotel est une application web moderne pour la gestion des hôtel
 ### Étapes
 1. Cloner le dépôt :
    ```bash
-   git clone https://github.com/votre-utilisateur/projet-akkor-hotel.git
+   git clone https://github.com/theagentmaro/projet-akkor-hotel.git
    ```
 2. Installer les dépendances du backend :
    ```bash
