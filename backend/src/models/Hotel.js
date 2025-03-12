@@ -28,6 +28,10 @@ const mongoose = require('mongoose');
  *           items:
  *             type: string
  *           description: Liste des URLs des images de l'hôtel
+ *         status:
+ *           type: string
+ *           enum: [available, maintenance, closed]
+ *           description: Statut de l'hôtel (disponible, en maintenance, fermé)
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -41,24 +45,40 @@ const hotelSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'Le nom est requis'],
-    trim: true
+    trim: true,
+    minlength: [2, 'Le nom doit contenir au moins 2 caractères'],
+    maxlength: [100, 'Le nom ne peut pas dépasser 100 caractères']
   },
   location: {
     type: String,
     required: [true, 'La localisation est requise'],
-    trim: true
+    trim: true,
+    minlength: [2, 'La localisation doit contenir au moins 2 caractères'],
+    maxlength: [200, 'La localisation ne peut pas dépasser 200 caractères']
   },
   description: {
     type: String,
-    required: [true, 'La description est requise']
+    required: [true, 'La description est requise'],
+    minlength: [10, 'La description doit contenir au moins 10 caractères'],
+    maxlength: [2000, 'La description ne peut pas dépasser 2000 caractères']
   },
   picture_list: {
     type: [String],
+    validate: {
+      validator: function(v) {
+        return v.length <= 5;
+      },
+      message: 'Un hôtel ne peut pas avoir plus de 5 images'
+    },
     default: []
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  status: {
+    type: String,
+    enum: {
+      values: ['available', 'maintenance', 'closed'],
+      message: 'Statut invalide. Les statuts autorisés sont : available, maintenance, closed'
+    },
+    default: 'available'
   }
 }, {
   timestamps: true,
@@ -72,10 +92,24 @@ const hotelSchema = new mongoose.Schema({
   }
 });
 
-// Index pour le tri
+// Index pour le tri et la recherche
 hotelSchema.index({ name: 1 });
 hotelSchema.index({ location: 1 });
 hotelSchema.index({ createdAt: -1 });
+hotelSchema.index({ status: 1 });
+
+// Middleware de validation personnalisée
+hotelSchema.pre('save', function(next) {
+  // Validation des URLs des images
+  if (this.picture_list.length > 0) {
+    const urlPattern = /^\/uploads\/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif)$/;
+    const validUrls = this.picture_list.every(url => urlPattern.test(url));
+    if (!validUrls) {
+      next(new Error('Format d\'URL d\'image invalide'));
+    }
+  }
+  next();
+});
 
 const Hotel = mongoose.model('Hotel', hotelSchema);
 

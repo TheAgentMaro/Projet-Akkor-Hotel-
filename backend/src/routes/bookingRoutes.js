@@ -7,13 +7,7 @@ const validator = require('../middleware/validator');
 // Toutes les routes nécessitent d'être authentifié
 router.use(protect);
 
-/**
- * @swagger
- * tags:
- *   name: Bookings
- *   description: Gestion des réservations
- */
-
+// Routes pour tous les utilisateurs authentifiés
 /**
  * @swagger
  * /api/bookings:
@@ -56,66 +50,6 @@ router.get('/me', bookingController.getUserBookings);
 
 /**
  * @swagger
- * /api/bookings/{id}:
- *   get:
- *     tags: [Bookings]
- *     summary: Obtenir une réservation par ID
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Détails de la réservation
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Non autorisé
- *       404:
- *         description: Réservation non trouvée
- */
-router.get('/:id', bookingController.getBookingById);
-
-/**
- * @swagger
- * /api/bookings/{id}:
- *   put:
- *     tags: [Bookings]
- *     summary: Mettre à jour une réservation
- *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/Booking'
- *     responses:
- *       200:
- *         description: Réservation mise à jour avec succès
- *       400:
- *         description: Données invalides
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Non autorisé
- *       404:
- *         description: Réservation non trouvée
- */
-router.put('/:id', validator.validateBookingUpdate, bookingController.updateBooking);
-
-/**
- * @swagger
  * /api/bookings/{id}/cancel:
  *   put:
  *     tags: [Bookings]
@@ -140,7 +74,7 @@ router.put('/:id', validator.validateBookingUpdate, bookingController.updateBook
  */
 router.put('/:id/cancel', bookingController.cancelBooking);
 
-// Routes accessibles aux employés et admins
+// Routes pour employés et admins
 /**
  * @swagger
  * /api/bookings:
@@ -174,6 +108,67 @@ router.get('/', adminOrEmployee, bookingController.getAllBookings);
 /**
  * @swagger
  * /api/bookings/{id}:
+ *   get:
+ *     tags: [Bookings]
+ *     summary: Obtenir une réservation par ID (admin et employee)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Détails de la réservation
+ *       401:
+ *         description: Non authentifié
+ *       403:
+ *         description: Non autorisé
+ *       404:
+ *         description: Réservation non trouvée
+ */
+router.get('/:id', adminOrEmployee, bookingController.getBookingById);
+
+/**
+ * @swagger
+ * /api/bookings/{id}:
+ *   put:
+ *     tags: [Bookings]
+ *     summary: Mettre à jour une réservation (admin et employee)
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Booking'
+ *     responses:
+ *       200:
+ *         description: Réservation mise à jour avec succès
+ *       400:
+ *         description: Données invalides
+ *       401:
+ *         description: Non authentifié
+ *       403:
+ *         description: Non autorisé
+ *       404:
+ *         description: Réservation non trouvée
+ */
+router.put('/:id', adminOrEmployee, validator.validateBookingUpdate, bookingController.updateBooking);
+
+// Routes admin uniquement
+/**
+ * @swagger
+ * /api/bookings/{id}:
  *   delete:
  *     tags: [Bookings]
  *     summary: Supprimer une réservation (admin  uniquement)
@@ -196,9 +191,5 @@ router.get('/', adminOrEmployee, bookingController.getAllBookings);
  *         description: Réservation non trouvée
  */
 router.delete('/:id', admin, bookingController.deleteBooking);
-
-
-
-
 
 module.exports = router;

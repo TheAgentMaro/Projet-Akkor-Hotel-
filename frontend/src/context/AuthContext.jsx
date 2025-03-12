@@ -28,12 +28,11 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('user', JSON.stringify(response.data));
           } else {
             // Si la réponse n'est pas valide, nettoyer le stockage
-            handleLogout();
+            handleLogout('Session expirée. Veuillez vous reconnecter.');
           }
         } catch (error) {
           console.error('Erreur lors de la récupération du profil:', error);
-          setError(error.message);
-          handleLogout();
+          handleLogout(error.message || 'Erreur de connexion. Veuillez vous reconnecter.');
         }
       } else {
         handleLogout();
@@ -44,27 +43,39 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = (errorMessage = null) => {
+    // Double confirmation pour la déconnexion si ce n'est pas dû à une erreur
+    if (!errorMessage && !confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+      return;
+    }
+
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
     setIsAuthenticated(false);
-    setError(null);
+    setError(errorMessage);
+
+    // Redirection avec message d'erreur si nécessaire
+    if (errorMessage) {
+      window.location.href = `/login?error=${encodeURIComponent(errorMessage)}`;
+    } else {
+      window.location.href = '/login';
+    }
   };
 
   const login = async (userData, token) => {
     try {
-      // Ajouter le préfixe Bearer si nécessaire
       const tokenWithBearer = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-      
-      // Stocker les informations d'authentification
       localStorage.setItem('token', tokenWithBearer);
       localStorage.setItem('user', JSON.stringify(userData));
-      
-      // Mettre à jour l'état
       setUser(userData);
       setIsAuthenticated(true);
       setError(null);
+
+      // Redirection intelligente selon le rôle
+      const redirectPath = localStorage.getItem('redirectPath') || getRoleDefaultPath(userData.role);
+      localStorage.removeItem('redirectPath');
+      window.location.href = redirectPath;
     } catch (error) {
       console.error('Erreur lors de la connexion:', error);
       setError('Erreur lors de la connexion');
@@ -73,14 +84,40 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    handleLogout();
+  // Obtenir le chemin par défaut selon le rôle
+  const getRoleDefaultPath = (role) => {
+    switch (role) {
+      case 'admin':
+        return '/admin/dashboard';
+      case 'employee':
+        return '/employee/dashboard';
+      default:
+        return '/';
+    }
   };
 
+  // Vérifier si l'utilisateur a un rôle spécifique
+  const hasRole = (role) => {
+    if (!user) return false;
+    if (role === 'admin') return user.role === 'admin';
+    if (role === 'employee') return ['admin', 'employee'].includes(user.role);
+    return true;
+  };
+
+  // Vérifier si l'utilisateur peut accéder à une ressource
+  const canAccess = (resourceId) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    if (user.role === 'employee') return true;
+    return user.id === resourceId;
+  };
+
+  // Composant de chargement avec style adaptatif
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex flex-col justify-center items-center min-h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <p className="mt-4 text-gray-600">Chargement de votre session...</p>
       </div>
     );
   }
@@ -89,10 +126,23 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{ 
       user, 
       login, 
-      logout, 
+      logout: handleLogout, 
       loading,
       error,
-      isAuthenticated
+      isAuthenticated,
+      hasRole,
+      canAccess,
+      // Ajouter des badges de rôle avec code couleur
+      roleBadgeColor: user ? {
+        admin: 'bg-red-100 text-red-800',
+        employee: 'bg-blue-100 text-blue-800',
+        user: 'bg-green-100 text-green-800'
+      }[user.role] : '',
+      roleLabel: user ? {
+        admin: 'Administrateur',
+        employee: 'Employé',
+        user: 'Utilisateur'
+      }[user.role] : ''
     }}>
       {children}
     </AuthContext.Provider>

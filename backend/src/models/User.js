@@ -28,9 +28,9 @@ const bcrypt = require('bcryptjs');
  *           description: Mot de passe hashé de l'utilisateur
  *         role:
  *           type: string
- *           enum: [user, admin]
+ *           enum: [user, employee, admin]
  *           default: user
- *           description: Rôle de l'utilisateur
+ *           description: Rôle de l'utilisateur (user, employee, admin)
  */
 const userSchema = new mongoose.Schema({
   email: {
@@ -55,7 +55,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'admin'],
+    enum: ['user', 'employee', 'admin'],
     default: 'user'
   }
 }, {

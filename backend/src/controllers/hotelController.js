@@ -1,4 +1,5 @@
 const Hotel = require('../models/Hotel');
+const Booking = require('../models/Booking');
 const createError = require('http-errors');
 
 const hotelController = {
@@ -70,6 +71,117 @@ const hotelController = {
     }
   },
 
+  // Vérifier la disponibilité (employé et admin)
+  async checkAvailability(req, res, next) {
+    try {
+      const { hotelId, checkIn, checkOut } = req.query;
+
+      if (!hotelId || !checkIn || !checkOut) {
+        throw createError(400, 'hotelId, checkIn et checkOut sont requis');
+      }
+
+      const hotel = await Hotel.findById(hotelId);
+      if (!hotel) {
+        throw createError(404, 'Hôtel non trouvé');
+      }
+
+      // Vérifier les réservations existantes
+      const overlappingBookings = await Booking.find({
+        hotel: hotelId,
+        $or: [
+          {
+            checkIn: { $lte: new Date(checkOut) },
+            checkOut: { $gte: new Date(checkIn) }
+          }
+        ]
+      });
+
+      const isAvailable = overlappingBookings.length === 0;
+
+      res.json({
+        success: true,
+        data: {
+          isAvailable,
+          overlappingBookings: overlappingBookings.length
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Obtenir les statistiques d'occupation (employé et admin)
+  async getOccupancyStats(req, res, next) {
+    try {
+      const { hotelId, startDate, endDate } = req.query;
+
+      if (!hotelId || !startDate || !endDate) {
+        throw createError(400, 'hotelId, startDate et endDate sont requis');
+      }
+
+      const hotel = await Hotel.findById(hotelId);
+      if (!hotel) {
+        throw createError(404, 'Hôtel non trouvé');
+      }
+
+      const bookings = await Booking.find({
+        hotel: hotelId,
+        checkIn: { $gte: new Date(startDate) },
+        checkOut: { $lte: new Date(endDate) }
+      });
+
+      // Calculer le taux d'occupation
+      const totalDays = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+      const occupiedDays = bookings.reduce((acc, booking) => {
+        const days = Math.ceil((booking.checkOut - booking.checkIn) / (1000 * 60 * 60 * 24));
+        return acc + days;
+      }, 0);
+
+      const occupancyRate = (occupiedDays / totalDays) * 100;
+
+      res.json({
+        success: true,
+        data: {
+          totalDays,
+          occupiedDays,
+          occupancyRate: Math.round(occupancyRate * 100) / 100,
+          totalBookings: bookings.length
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // Mettre à jour le statut d'un hôtel (employé et admin)
+  async updateHotelStatus(req, res, next) {
+    try {
+      const { status } = req.body;
+      
+      if (!['available', 'maintenance', 'closed'].includes(status)) {
+        throw createError(400, 'Statut invalide. Les statuts autorisés sont : available, maintenance, closed');
+      }
+
+      const hotel = await Hotel.findByIdAndUpdate(
+        req.params.id,
+        { status },
+        { new: true, runValidators: true }
+      );
+
+      if (!hotel) {
+        throw createError(404, 'Hôtel non trouvé');
+      }
+
+      res.json({
+        success: true,
+        data: hotel,
+        message: 'Statut de l\'hôtel mis à jour avec succès'
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   // Créer un nouvel hôtel (admin uniquement)
   async createHotel(req, res, next) {
     try {
@@ -91,7 +203,8 @@ const hotelController = {
         name: name.trim(),
         location: location.trim(),
         description: description.trim(),
-        picture_list: req.files ? req.files.map(file => `/uploads/${file.filename}`) : []
+        picture_list: req.files ? req.files.map(file => `/uploads/${file.filename}`) : [],
+        status: 'available'
       });
   
       res.status(201).json({

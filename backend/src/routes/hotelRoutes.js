@@ -1,246 +1,52 @@
 const express = require('express');
 const router = express.Router();
 const hotelController = require('../controllers/hotelController');
-const auth = require('../middleware/auth');
+const { protect, admin, adminOrEmployee } = require('../middleware/auth');
 const validator = require('../middleware/validator');
 const multer = require('multer');
 const path = require('path');
 
-// Configuration de Multer
+// Configuration de Multer pour les images
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-  });
-  
-  const upload = multer({ 
-    storage: storage,
-    fileFilter: (req, file, cb) => {
-      const allowedTypes = /jpeg|jpg|png|gif/;
-      const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-      const mimetype = allowedTypes.test(file.mimetype);
-  
-      if (extname && mimetype) {
-        return cb(null, true);
-      } else {
-        cb(new Error('Seules les images sont autorisées!'));
-      }
-    }
-  });
-  
-  // Middleware pour parser le form-data avant la validation
-  const parseFormData = (req, res, next) => {
-    console.log('Body reçu dans parseFormData:', req.body);
-    next();
-  };
-  
-  router.post('/', 
-    auth.protect, 
-    auth.admin,
-    upload.array('picture_list', 5),
-    parseFormData,
-    validator.validateHotelCreate,
-    hotelController.createHotel
-  );
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
 
-/**
- * @swagger
- * tags:
- *   name: Hotels
- *   description: Gestion des hôtels
- */
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
 
-/**
- * @swagger
- * /api/hotels:
- *   get:
- *     tags: [Hotels]
- *     summary: Liste tous les hôtels
- *     description: Récupère la liste des hôtels avec options de tri et pagination
- *     parameters:
- *       - in: query
- *         name: sort
- *         schema:
- *           type: string
- *           enum: [name, location, createdAt]
- *         description: Champ pour le tri
- *       - in: query
- *         name: order
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *         description: Ordre du tri (asc ou desc)
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 10
- *         description: Nombre maximum d'hôtels à retourner
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Numéro de la page
- *     responses:
- *       200:
- *         description: Liste des hôtels récupérée avec succès
- *       400:
- *         description: Paramètres de requête invalides
- */
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Seules les images sont autorisées!'));
+    }
+  }
+});
+
+// Routes publiques (consultation des hôtels)
 router.get('/', hotelController.getAllHotels);
-
-/**
- * @swagger
- * /api/hotels:
- *   post:
- *     tags: [Hotels]
- *     summary: Crée un nouvel hôtel
- *     description: Crée un nouvel hôtel (réservé aux administrateurs)
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - location
- *               - description
- *             properties:
- *               name:
- *                 type: string
- *                 description: Nom de l'hôtel
- *               location:
- *                 type: string
- *                 description: Localisation de l'hôtel
- *               description:
- *                 type: string
- *                 description: Description détaillée de l'hôtel
- *               picture_list:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Liste des URLs des images de l'hôtel
- *     responses:
- *       201:
- *         description: Hôtel créé avec succès
- *       400:
- *         description: Données invalides
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Non autorisé (réservé aux administrateurs)
- */
-router.post('/', auth.protect, auth.admin, validator.validateHotelCreate, hotelController.createHotel);
-
-/**
- * @swagger
- * /api/hotels/{id}:
- *   get:
- *     tags: [Hotels]
- *     summary: Obtient un hôtel par son ID
- *     description: Récupère les détails d'un hôtel spécifique
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID de l'hôtel
- *     responses:
- *       200:
- *         description: Détails de l'hôtel récupérés avec succès
- *       404:
- *         description: Hôtel non trouvé
- */
 router.get('/:id', hotelController.getHotelById);
 
-/**
- * @swagger
- * /api/hotels/{id}:
- *   put:
- *     tags: [Hotels]
- *     summary: Met à jour un hôtel
- *     description: Met à jour les informations d'un hôtel (réservé aux administrateurs)
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID de l'hôtel à mettre à jour
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 description: Nom de l'hôtel
- *               location:
- *                 type: string
- *                 description: Localisation de l'hôtel
- *               description:
- *                 type: string
- *                 description: Description détaillée de l'hôtel
- *               picture_list:
- *                 type: array
- *                 items:
- *                   type: string
- *                 description: Liste des URLs des images de l'hôtel
- *     responses:
- *       200:
- *         description: Hôtel mis à jour avec succès
- *       400:
- *         description: Données invalides
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Non autorisé (réservé aux administrateurs)
- *       404:
- *         description: Hôtel non trouvé
- */
-router.put('/:id', auth.protect, auth.admin, validator.validateHotelUpdate, hotelController.updateHotel);
+// Routes protégées
+router.use(protect);
 
-/**
- * @swagger
- * /api/hotels/{id}:
- *   delete:
- *     tags: [Hotels]
- *     summary: Supprime un hôtel
- *     description: Supprime un hôtel existant (réservé aux administrateurs)
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID de l'hôtel à supprimer
- *     responses:
- *       200:
- *         description: Hôtel supprimé avec succès
- *       401:
- *         description: Non authentifié
- *       403:
- *         description: Non autorisé (réservé aux administrateurs)
- *       404:
- *         description: Hôtel non trouvé
- */
-router.delete('/:id', auth.protect, auth.admin, hotelController.deleteHotel);
+// Routes pour employés et admins
+router.get('/search/availability', adminOrEmployee, hotelController.checkAvailability);
+router.get('/stats/occupancy', adminOrEmployee, hotelController.getOccupancyStats);
+router.put('/:id/status', adminOrEmployee, hotelController.updateHotelStatus);
+
+// Routes admin uniquement
+router.post('/', admin, upload.array('pictures', 5), validator.validateHotelCreate, hotelController.createHotel);
+router.put('/:id', admin, upload.array('pictures', 5), validator.validateHotelUpdate, hotelController.updateHotel);
+router.delete('/:id', admin, hotelController.deleteHotel);
 
 module.exports = router;

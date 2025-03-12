@@ -4,161 +4,25 @@ const userController = require('../controllers/userController');
 const { protect, admin, adminOrEmployee } = require('../middleware/auth');
 const validator = require('../middleware/validator');
 
-/**
- * @swagger
- * /api/users/register:
- *   post:
- *     summary: Créer un nouvel utilisateur
- *     tags: [Users]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - pseudo
- *               - password
- *             properties:
- *               email:
- *                 type: string
- *               pseudo:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       201:
- *         description: Utilisateur créé avec succès
- *       409:
- *         description: Email déjà utilisé
- */
+// Routes publiques
 router.post('/register', validator.validateRegistration, userController.register);
+router.post('/login', validator.validateLogin, userController.login);
 
-/**
- * @swagger
- * /api/users:
- *   get:
- *     summary: Obtenir la liste des utilisateurs (admin uniquement)
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Liste des utilisateurs
- *       403:
- *         description: Non autorisé
- */
-router.use(protect); // Appliquer le middleware d'authentification à toutes les routes suivantes
+// Routes protégées
+router.use(protect);
 
-/**
- * @swagger
- * /api/users/profile:
- *   get:
- *     summary: Obtenir son profil
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Profil de l'utilisateur
- *       401:
- *         description: Non authentifié
- */
-router.get('/profile', userController.getProfile);
+// Routes pour tous les utilisateurs authentifiés (gestion de son profil)
+router.get('/me', userController.getProfile);
+router.put('/me', validator.validateUserUpdate, userController.updateUser);
+router.delete('/me', userController.deleteUser);
 
-/**
- * @swagger
- * /api/users/{id}:
- *   get:
- *     summary: Obtenir un utilisateur par ID
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Détails de l'utilisateur
- *       403:
- *         description: Non autorisé
- *       404:
- *         description: Utilisateur non trouvé
- * 
- *   put:
- *     summary: Mettre à jour un utilisateur
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *               pseudo:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: Utilisateur mis à jour
- *       403:
- *         description: Non autorisé
- *       404:
- *         description: Utilisateur non trouvé
- * 
- *   delete:
- *     summary: Supprimer un utilisateur
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Utilisateur supprimé
- *       403:
- *         description: Non autorisé
- *       404:
- *         description: Utilisateur non trouvé
- */
-router.route('/:id')
-  .get(userController.getUserById)
-  .put(validator.validateUserUpdate, userController.updateUser)
-  .delete(userController.deleteUser);
+// Routes pour employés et admins (recherche et consultation des utilisateurs)
+router.get('/search', adminOrEmployee, userController.getAllUsers); // Utiliser getAllUsers comme recherche
+router.get('/:id', adminOrEmployee, userController.getUserById);
 
-/**
- * @swagger
- * /api/users:
- *   get:
- *     summary: Obtenir la liste des utilisateurs (admin uniquement)
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Liste des utilisateurs
- *       403:
- *         description: Non autorisé
- */
+// Routes admin uniquement (gestion complète des utilisateurs)
 router.get('/', admin, userController.getAllUsers);
+router.put('/:id', admin, validator.validateUserUpdate, userController.updateUser);
+router.delete('/:id', admin, userController.deleteUser);
 
 module.exports = router;

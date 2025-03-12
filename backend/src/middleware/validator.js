@@ -38,7 +38,7 @@ const validator = {
   },
 
   validateUserUpdate(req, res, next) {
-    const { email, pseudo, password } = req.body;
+    const { email, pseudo, password, role } = req.body;
 
     if (email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,20 +55,31 @@ const validator = {
       return next(createError(400, 'Le mot de passe doit contenir au moins 6 caractères'));
     }
 
+    if (role && !['user', 'employee', 'admin'].includes(role)) {
+      return next(createError(400, 'Rôle invalide. Les rôles autorisés sont : user, employee, admin'));
+    }
+
+    next();
+  },
+
+  validateUserRole(req, res, next) {
+    const { role } = req.body;
+
+    if (!role) {
+      return next(createError(400, 'Le rôle est requis'));
+    }
+
+    if (!['user', 'employee', 'admin'].includes(role)) {
+      return next(createError(400, 'Rôle invalide. Les rôles autorisés sont : user, employee, admin'));
+    }
+
     next();
   },
 
   validateHotelCreate(req, res, next) {
     try {
-      console.log('Validation body dans validator:', req.body);
-      console.log('Files dans validator:', req.files);
-  
       const { name, location, description } = req.body;
   
-      // Debug des valeurs reçues
-      console.log('Valeurs reçues:', { name, location, description });
-  
-      // Vérification plus précise des champs
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return res.status(400).json({
           success: false,
@@ -90,7 +101,6 @@ const validator = {
         });
       }
   
-      // Si tout est valide, on continue
       next();
     } catch (error) {
       console.error('Erreur validation:', error);
@@ -151,12 +161,10 @@ const validator = {
         return next(createError(400, 'La date de départ doit être après la date d\'arrivée'));
       }
 
-      // Validation du nombre de personnes
       if (numberOfGuests < 1) {
         return next(createError(400, 'Au moins une personne requise'));
       }
 
-      // Validation du prix
       if (totalPrice < 0) {
         return next(createError(400, 'Le prix ne peut pas être négatif'));
       }
@@ -205,7 +213,7 @@ const validator = {
 
       next();
     } catch (error) {
-      return next(createError(400, 'Erreur de validation des dates'));
+      return next(createError(400, 'Erreur de validation des données'));
     }
   }
 };
