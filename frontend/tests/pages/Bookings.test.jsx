@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import axios from 'axios';
 import Bookings from '../../src/pages/Bookings';
@@ -60,6 +60,111 @@ describe('Bookings Page', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Erreur lors du chargement des réservations/i)).toBeInTheDocument();
+    });
+  });
+
+  it('affiche un message lorsque aucune réservation n\'est trouvée', async () => {
+    axios.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: []
+      }
+    });
+
+    render(
+      <MemoryRouter>
+        <Bookings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Aucune réservation trouvée/i)).toBeInTheDocument();
+    });
+  });
+
+  it('annule une réservation avec succès', async () => {
+    axios.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: [
+          {
+            id: '1',
+            hotel: { name: 'Hotel Test' },
+            checkIn: new Date().toISOString(),
+            checkOut: new Date().toISOString(),
+            status: 'confirmed'
+          }
+        ]
+      }
+    });
+
+    axios.delete.mockResolvedValueOnce({
+      data: {
+        success: true
+      }
+    });
+
+    render(
+      <MemoryRouter>
+        <Bookings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Hotel Test/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/Annuler/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Confirmer l'annulation/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/Confirmer l'annulation/i));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Hotel Test/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it('affiche un message d\'erreur lors de l\'annulation d\'une réservation', async () => {
+    axios.get.mockResolvedValueOnce({
+      data: {
+        success: true,
+        data: [
+          {
+            id: '1',
+            hotel: { name: 'Hotel Test' },
+            checkIn: new Date().toISOString(),
+            checkOut: new Date().toISOString(),
+            status: 'confirmed'
+          }
+        ]
+      }
+    });
+
+    axios.delete.mockRejectedValueOnce(new Error('Server error'));
+
+    render(
+      <MemoryRouter>
+        <Bookings />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Hotel Test/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/Annuler/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Confirmer l'annulation/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/Confirmer l'annulation/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Erreur lors de l'annulation/i)).toBeInTheDocument();
     });
   });
 });
