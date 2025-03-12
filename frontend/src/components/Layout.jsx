@@ -1,113 +1,92 @@
 import React, { useContext, useState, useEffect } from 'react';
-import { Link, Outlet, useNavigate, useLocation, NavLink } from 'react-router-dom';
+import { Link, useNavigate, useLocation, NavLink } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 
-const Layout = () => {
+const Layout = ({ children }) => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isConfirmingLogout, setIsConfirmingLogout] = useState(false);
 
   const navigationItems = [
     { path: '/', label: 'Accueil', public: true },
     { path: '/hotels', label: 'Hôtels', public: true },
-    { path: '/bookings', label: 'Réservations', private: true },
-    { path: '/profile', label: 'Profil', private: true },
+    { path: '/bookings', label: 'Mes Réservations', private: true },
+    { path: '/profile', label: 'Mon Profil', private: true },
     { path: '/admin/hotels', label: 'Gestion Hôtels', adminOnly: true },
     { path: '/admin/users', label: 'Gestion Utilisateurs', adminOnly: true },
-    { path: '/employee/users', label: 'Recherche Utilisateurs', employeeOnly: true }
+    { path: '/employee/users', label: 'Recherche Utilisateurs', employeeOnly: true },
+    { path: '/employee/bookings', label: 'Réservations', employeeOnly: true }
   ];
 
   const renderNavItems = () => {
     return navigationItems.map((item) => {
       // Items publics (toujours visibles)
       if (item.public) {
-        return (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `px-3 py-2 rounded-md text-sm font-medium ${
-                isActive
-                  ? 'bg-blue-700 text-white'
-                  : 'text-white hover:bg-blue-500'
-              }`
-            }
-          >
-            {item.label}
-          </NavLink>
-        );
+        return renderNavLink(item);
       }
 
       // Items privés (visibles uniquement si connecté)
       if (item.private && user) {
-        return (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `px-3 py-2 rounded-md text-sm font-medium ${
-                isActive
-                  ? 'bg-blue-700 text-white'
-                  : 'text-white hover:bg-blue-500'
-              }`
-            }
-          >
-            {item.label}
-          </NavLink>
-        );
+        return renderNavLink(item);
       }
 
       // Items admin (visibles uniquement si l'utilisateur est admin)
       if (item.adminOnly && user?.role === 'admin') {
-        return (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `px-3 py-2 rounded-md text-sm font-medium ${
-                isActive
-                  ? 'bg-blue-700 text-white'
-                  : 'text-white hover:bg-blue-500'
-              }`
-            }
-          >
-            {item.label}
-          </NavLink>
-        );
+        return renderNavLink(item);
       }
 
       // Items employee (visibles pour les employés et admins)
       if (item.employeeOnly && (user?.role === 'employee' || user?.role === 'admin')) {
-        return (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `px-3 py-2 rounded-md text-sm font-medium ${
-                isActive
-                  ? 'bg-blue-700 text-white'
-                  : 'text-white hover:bg-blue-500'
-              }`
-            }
-          >
-            {item.label}
-          </NavLink>
-        );
+        return renderNavLink(item);
       }
 
       return null;
     });
   };
 
+  const renderNavLink = (item) => (
+    <NavLink
+      key={item.path}
+      to={item.path}
+      className={({ isActive }) =>
+        `px-3 py-2 rounded-md text-sm font-medium ${
+          isActive
+            ? 'bg-blue-700 text-white'
+            : 'text-white hover:bg-blue-500 transition-colors duration-200'
+        }`
+      }
+    >
+      {item.label}
+    </NavLink>
+  );
+
   // Fermer le menu mobile lors du changement de route
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsConfirmingLogout(false);
   }, [location.pathname]);
 
   const handleLogout = () => {
+    if (!isConfirmingLogout) {
+      setIsConfirmingLogout(true);
+      return;
+    }
     logout();
     navigate('/login');
+    setIsConfirmingLogout(false);
+  };
+
+  const getRoleBadgeColor = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-red-100 text-red-800';
+      case 'employee':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-green-100 text-green-800';
+    }
   };
 
   return (
@@ -115,8 +94,8 @@ const Layout = () => {
       <header className="bg-blue-600 text-white shadow-md sticky top-0 z-50">
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="font-bold text-xl">
-              Akkor Hotel
+            <Link to="/" className="flex items-center space-x-2">
+              <span className="font-bold text-xl">Akkor Hotel</span>
             </Link>
 
             {/* Navigation Desktop */}
@@ -125,14 +104,21 @@ const Layout = () => {
               
               {user ? (
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm">
-                    {user.pseudo} ({user.role})
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium">{user.pseudo}</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
+                      {user.role}
+                    </span>
+                  </div>
                   <button
                     onClick={handleLogout}
-                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                      isConfirmingLogout
+                        ? 'bg-red-600 text-white hover:bg-red-700'
+                        : 'bg-red-500 text-white hover:bg-red-600'
+                    }`}
                   >
-                    Déconnexion
+                    {isConfirmingLogout ? 'Confirmer la déconnexion' : 'Déconnexion'}
                   </button>
                 </div>
               ) : (
@@ -140,7 +126,7 @@ const Layout = () => {
                   <NavLink
                     to="/login"
                     className={({ isActive }) =>
-                      `px-4 py-2 rounded-md text-sm font-medium ${
+                      `px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                         isActive
                           ? 'bg-blue-700 text-white'
                           : 'bg-white text-blue-600 hover:bg-blue-50'
@@ -152,7 +138,7 @@ const Layout = () => {
                   <NavLink
                     to="/register"
                     className={({ isActive }) =>
-                      `px-4 py-2 rounded-md text-sm font-medium ${
+                      `px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                         isActive
                           ? 'bg-blue-700 text-white'
                           : 'bg-blue-500 text-white hover:bg-blue-600'
@@ -168,7 +154,8 @@ const Layout = () => {
             {/* Menu Mobile Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 rounded-md text-white hover:bg-blue-700"
+              className="md:hidden p-2 rounded-md text-white hover:bg-blue-700 transition-colors duration-200"
+              aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? (
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -184,45 +171,48 @@ const Layout = () => {
 
           {/* Menu Mobile */}
           {isMobileMenuOpen && (
-            <div className="md:hidden border-t border-blue-500 py-2">
+            <div className="md:hidden border-t border-blue-500 py-2 space-y-1">
               {renderNavItems()}
               {user ? (
-                <div className="border-t border-blue-500 pt-2 mt-2">
-                  <div className="px-3 py-2 text-sm">
-                    {user.pseudo} ({user.role})
+                <div className="border-t border-blue-500 pt-2 mt-2 space-y-2">
+                  <div className="px-3 py-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium">{user.pseudo}</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user.role)}`}>
+                        {user.role}
+                      </span>
+                    </div>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="w-full text-left px-3 py-2 text-white hover:bg-blue-700 rounded-md"
+                    className={`w-full text-left px-3 py-2 text-white rounded-md transition-colors duration-200 ${
+                      isConfirmingLogout
+                        ? 'bg-red-600 hover:bg-red-700'
+                        : 'hover:bg-blue-700'
+                    }`}
                   >
-                    Déconnexion
+                    {isConfirmingLogout ? 'Confirmer la déconnexion' : 'Déconnexion'}
                   </button>
                 </div>
               ) : (
-                <div className="border-t border-blue-500 pt-2 mt-2">
+                <div className="border-t border-blue-500 pt-2 mt-2 space-y-2">
                   <NavLink
                     to="/login"
                     className={({ isActive }) =>
                       `block px-3 py-2 rounded-md text-sm font-medium ${
-                        isActive
-                          ? 'bg-blue-700 text-white'
-                          : 'text-white hover:bg-blue-500'
+                        isActive ? 'bg-blue-700' : 'hover:bg-blue-700'
                       }`
                     }
-                    onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Connexion
                   </NavLink>
                   <NavLink
                     to="/register"
                     className={({ isActive }) =>
-                      `block px-3 py-2 rounded-md text-sm font-medium mt-2 ${
-                        isActive
-                          ? 'bg-blue-700 text-white'
-                          : 'text-white hover:bg-blue-500'
+                      `block px-3 py-2 rounded-md text-sm font-medium ${
+                        isActive ? 'bg-blue-700' : 'hover:bg-blue-700'
                       }`
                     }
-                    onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Inscription
                   </NavLink>
@@ -233,13 +223,53 @@ const Layout = () => {
         </nav>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <Outlet />
+      <main className="flex-1 py-6">
+        {children}
       </main>
 
       <footer className="bg-gray-800 text-white py-8">
-        <div className="container mx-auto px-4">
-          <p className="text-center">&copy; 2024 Akkor Hotel. Tous droits réservés.</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Akkor Hotel</h3>
+              <p className="text-gray-400">
+                Votre destination de confiance pour des séjours inoubliables.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Liens rapides</h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link to="/hotels" className="text-gray-400 hover:text-white">
+                    Nos hôtels
+                  </Link>
+                </li>
+                {user && (
+                  <li>
+                    <Link to="/bookings" className="text-gray-400 hover:text-white">
+                      Mes réservations
+                    </Link>
+                  </li>
+                )}
+                <li>
+                  <Link to="/profile" className="text-gray-400 hover:text-white">
+                    Mon compte
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Contact</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li>Email: contact@akkor-hotel.com</li>
+                <li>Téléphone: +33 1 23 45 67 89</li>
+                <li>Adresse: 123 Rue de l'Hôtel, Paris</li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
+            <p>&copy; {new Date().getFullYear()} Akkor Hotel. Tous droits réservés.</p>
+          </div>
         </div>
       </footer>
     </div>

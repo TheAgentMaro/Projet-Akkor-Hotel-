@@ -16,6 +16,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminHotels from './pages/AdminHotels';
 import EmployeeUsers from './pages/EmployeeUsers';
 import Bookings from './pages/Bookings';
+import CreateBooking from './pages/CreateBooking';
 
 function App() {
   return (
@@ -43,6 +44,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Bookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookings/create/:hotelId"
+              element={
+                <ProtectedRoute>
+                  <CreateBooking />
                 </ProtectedRoute>
               }
             />

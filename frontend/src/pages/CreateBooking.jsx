@@ -1,206 +1,254 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import * as Yup from 'yup';
-import axios from 'axios';
-import { bookingApi } from '../services/api';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import * as yup from 'yup';
+import { bookingApi, hotelApi } from '../services/api';
+
+const schema = yup.object().shape({
+  checkIn: yup
+    .date()
+    .required('Date d\'arrivée requise')
+    .min(new Date(), 'La date d\'arrivée doit être dans le futur'),
+  checkOut: yup
+    .date()
+    .required('Date de départ requise')
+    .min(yup.ref('checkIn'), 'La date de départ doit être après la date d\'arrivée'),
+  numberOfGuests: yup
+    .number()
+    .required('Nombre de personnes requis')
+    .min(1, 'Minimum 1 personne')
+    .max(10, 'Maximum 10 personnes'),
+  specialRequests: yup
+    .string()
+    .max(500, 'Maximum 500 caractères')
+});
 
 function CreateBooking() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const editBookingId = searchParams.get('edit');
-
-  const [hotels, setHotels] = useState([]);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-
-  const validationSchema = Yup.object().shape({
-    hotel: Yup.string().required('Choisissez un hôtel'),
-    checkIn: Yup.date().required('Date arrivée requise'),
-    checkOut: Yup.date().required('Date départ requise'),
-    numberOfGuests: Yup.number().min(1, 'Minimum 1').required('Nombre de personnes requis'),
-    totalPrice: Yup.number().min(0, 'Le prix ne peut pas être négatif').required('Prix requis'),
-    specialRequests: Yup.string().max(500, 'Max 500 caractères').optional()
-  });
+  const { hotelId } = useParams();
+  const [hotel, setHotel] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalPrice, setTotalPrice] = useState(0);
 
   const {
     register,
     handleSubmit,
-    setValue,
+    watch,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(validationSchema),
+    resolver: yupResolver(schema),
     defaultValues: {
-      hotel: '',
       checkIn: '',
       checkOut: '',
       numberOfGuests: 1,
-      totalPrice: 0,
       specialRequests: ''
-    },
+    }
   });
 
-  // Charger la liste des hôtels
-  useEffect(() => {
-    axios
-      .get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/hotels`)
-      .then((res) => {
-        if (res.data.success) {
-          setHotels(res.data.data);
-        }
-      })
-      .catch(() => {
-        setErrorMessage('Erreur lors du chargement des hôtels.');
-      });
-  }, []);
+  const checkIn = watch('checkIn');
+  const checkOut = watch('checkOut');
+  const numberOfGuests = watch('numberOfGuests');
 
-  // Charger la réservation existante si on est en mode édition
   useEffect(() => {
-    async function fetchBooking() {
+    const loadHotel = async () => {
       try {
-        if (editBookingId) {
-          const response = await axios.get(
-            `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/bookings/${editBookingId}`,
-            {
-              headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`,
-              },
-            }
-          );
-          if (response.data.success) {
-            const booking = response.data.data;
-            setValue('hotel', booking.hotel? booking.hotel._id : '');
-            setValue('checkIn', booking.checkIn.split('T')[0]);
-            setValue('checkOut', booking.checkOut.split('T')[0]);
-            setValue('numberOfGuests', booking.numberOfGuests);
-            setValue('totalPrice', booking.totalPrice);
-            setValue('specialRequests', booking.specialRequests || '');
-          }
+        setLoading(true);
+        const response = await hotelApi.getHotelById(hotelId);
+        if (response.success) {
+          setHotel(response.data);
         }
       } catch (error) {
-        setErrorMessage('Erreur lors du chargement de la réservation à éditer.');
+        setError(error.response?.data?.message || 'Erreur lors du chargement de l\'hôtel');
+      } finally {
+        setLoading(false);
       }
+    };
+
+    if (hotelId) {
+      loadHotel();
     }
-    fetchBooking();
-  }, [editBookingId, setValue]);
+  }, [hotelId]);
 
-  const onSubmit = async (formData) => {
+  useEffect(() => {
+    if (hotel && checkIn && checkOut) {
+      const start = new Date(checkIn);
+      const end = new Date(checkOut);
+      const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      const price = hotel.price * nights * numberOfGuests;
+      setTotalPrice(price);
+    }
+  }, [hotel, checkIn, checkOut, numberOfGuests]);
+
+  const onSubmit = async (data) => {
     try {
-      setErrorMessage('');
-      setSuccessMessage('');
+      setIsSubmitting(true);
+      setError('');
 
-      if (editBookingId) {
-        // Update
-        const response = await bookingApi.updateBooking(editBookingId, formData);
-        if (response.success && response.data) {
-          setSuccessMessage('Réservation mise à jour avec succès!');
-          navigate('/bookings');
-        }
-      } else {
-        // Create
-        const response = await bookingApi.createBooking(formData);
-        if (response.success && response.data) {
-          setSuccessMessage('Réservation créée avec succès!');
-          navigate('/bookings');
-        }
+      const bookingData = {
+        hotelId,
+        ...data,
+        totalPrice
+      };
+
+      const response = await bookingApi.createBooking(bookingData);
+      
+      if (response.success) {
+        navigate('/bookings');
       }
     } catch (error) {
-      setErrorMessage(error.response?.data?.error || 'Erreur lors de la création/mise à jour de la réservation');
+      setError(error.response?.data?.message || 'Erreur lors de la création de la réservation');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded shadow space-y-6">
-      <h2 className="text-xl font-bold">
-        {editBookingId ? 'Modifier la Réservation' : 'Créer une Réservation'}
-      </h2>
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label className="block font-semibold mb-1">Hôtel</label>
-          <select
-            {...register('hotel')}
-            className="border p-2 w-full"
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8 bg-red-50 rounded-lg">
+          <p className="text-red-600 font-semibold">{error}</p>
+          <button
+            onClick={() => navigate('/hotels')}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
-            <option value="">-- Choisissez un hôtel --</option>
-            {hotels.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name} - {h.location}
-              </option>
-            ))}
-          </select>
-          {errors.hotel && <p className="text-red-500 text-sm">{errors.hotel.message}</p>}
+            Retour aux hôtels
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hotel) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8 bg-yellow-50 rounded-lg">
+          <p className="text-yellow-600 font-semibold">Hôtel non trouvé</p>
+          <button
+            onClick={() => navigate('/hotels')}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retour aux hôtels
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Réserver - {hotel.name}</h1>
+          <p className="text-gray-600">{hotel.location}</p>
         </div>
 
-        <div>
-          <label className="block font-semibold mb-1">Date d'arrivée</label>
-          <input
-            type="date"
-            {...register('checkIn')}
-            className="border p-2 w-full"
-          />
-          {errors.checkIn && <p className="text-red-500 text-sm">{errors.checkIn.message}</p>}
-        </div>
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date d'arrivée
+                </label>
+                <input
+                  type="date"
+                  {...register('checkIn')}
+                  className="w-full border rounded-md p-2"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+                {errors.checkIn && (
+                  <p className="mt-1 text-sm text-red-600">{errors.checkIn.message}</p>
+                )}
+              </div>
 
-        <div>
-          <label className="block font-semibold mb-1">Date de départ</label>
-          <input
-            type="date"
-            {...register('checkOut')}
-            className="border p-2 w-full"
-          />
-          {errors.checkOut && <p className="text-red-500 text-sm">{errors.checkOut.message}</p>}
-        </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date de départ
+                </label>
+                <input
+                  type="date"
+                  {...register('checkOut')}
+                  className="w-full border rounded-md p-2"
+                  min={checkIn || new Date().toISOString().split('T')[0]}
+                />
+                {errors.checkOut && (
+                  <p className="mt-1 text-sm text-red-600">{errors.checkOut.message}</p>
+                )}
+              </div>
+            </div>
 
-        <div>
-          <label className="block font-semibold mb-1">Nombre de personnes</label>
-          <input
-            type="number"
-            {...register('numberOfGuests')}
-            className="border p-2 w-full"
-          />
-          {errors.numberOfGuests && <p className="text-red-500 text-sm">{errors.numberOfGuests.message}</p>}
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre de personnes
+              </label>
+              <input
+                type="number"
+                {...register('numberOfGuests')}
+                className="w-full border rounded-md p-2"
+                min="1"
+                max="10"
+              />
+              {errors.numberOfGuests && (
+                <p className="mt-1 text-sm text-red-600">{errors.numberOfGuests.message}</p>
+              )}
+            </div>
 
-        <div>
-          <label className="block font-semibold mb-1">Prix total (EUR)</label>
-          <input
-            type="number"
-            {...register('totalPrice')}
-            className="border p-2 w-full"
-          />
-          {errors.totalPrice && <p className="text-red-500 text-sm">{errors.totalPrice.message}</p>}
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Demandes spéciales
+              </label>
+              <textarea
+                {...register('specialRequests')}
+                className="w-full border rounded-md p-2 h-32"
+                placeholder="Ex: Chambre non-fumeur, lit supplémentaire..."
+              />
+              {errors.specialRequests && (
+                <p className="mt-1 text-sm text-red-600">{errors.specialRequests.message}</p>
+              )}
+            </div>
 
-        <div>
-          <label className="block font-semibold mb-1">Demandes spéciales (optionnel)</label>
-          <textarea
-            {...register('specialRequests')}
-            className="border p-2 w-full"
-            rows={3}
-          />
-          {errors.specialRequests && <p className="text-red-500 text-sm">{errors.specialRequests.message}</p>}
-        </div>
+            {totalPrice > 0 && (
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">Prix total</span>
+                  <span className="text-2xl font-bold text-blue-600">{totalPrice}€</span>
+                </div>
+              </div>
+            )}
 
-        <button
-          type="submit"
-          className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
-        >
-          {editBookingId ? 'Enregistrer' : 'Créer'}
-        </button>
-      </form>
-
-      {successMessage && (
-        <div className="text-green-600 font-semibold">
-          {successMessage}
+            <div className="flex justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => navigate('/hotels')}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`px-6 py-2 rounded-md text-white ${
+                  isSubmitting
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : 'bg-blue-500 hover:bg-blue-600'
+                }`}
+              >
+                {isSubmitting ? 'Réservation en cours...' : 'Confirmer la réservation'}
+              </button>
+            </div>
+          </form>
         </div>
-      )}
-      {errorMessage && (
-        <div className="text-red-600 font-semibold">
-          {errorMessage}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
