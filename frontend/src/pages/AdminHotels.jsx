@@ -177,19 +177,30 @@ function AdminHotels() {
         });
       }
 
-      let response;
-      if (editMode && editHotelId) {
-        response = await hotelApi.updateHotel(editHotelId, formDataToSend);
-      } else {
-        response = await hotelApi.createHotel(formDataToSend);
-      }
+      setLoading(true);
       
-      if (response.success) {
-        setSuccessMessage(response.message || (editMode ? 'Hôtel modifié avec succès' : 'Hôtel créé avec succès'));
-        resetForm();
-        await loadHotels(); // Attendre que les hôtels soient rechargés
-      } else {
-        setError(response.error || 'Erreur lors de l\'opération');
+      try {
+        let response;
+        if (editMode && editHotelId) {
+          response = await hotelApi.updateHotel(editHotelId, formDataToSend);
+        } else {
+          response = await hotelApi.createHotel(formDataToSend);
+        }
+        
+        // Vérifier explicitement si la réponse indique un succès
+        if (response && response.success === true) {
+          // Afficher un message de succès
+          setSuccessMessage(response.message || (editMode ? 'Hôtel modifié avec succès' : 'Hôtel créé avec succès'));
+          resetForm();
+          await loadHotels(); // Attendre que les hôtels soient rechargés
+        } else {
+          // Afficher l'erreur retournée par l'API
+          setError(response?.error || 'Erreur lors de l\'opération');
+          console.error('Réponse API avec erreur:', response);
+        }
+      } catch (err) {
+        console.error('Exception lors de l\'opération:', err);
+        setError('Une erreur inattendue est survenue');
       }
     } catch (error) {
       console.error('Erreur complète:', error);

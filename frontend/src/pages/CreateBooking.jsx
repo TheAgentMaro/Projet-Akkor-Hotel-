@@ -56,20 +56,32 @@ function CreateBooking() {
     const loadHotel = async () => {
       try {
         setLoading(true);
+        setError('');
+        
+        // Vérifier si l'ID de l'hôtel est valide
+        if (!hotelId) {
+          setError('ID d\'hôtel non spécifié. Veuillez sélectionner un hôtel valide.');
+          return;
+        }
+        
         const response = await hotelApi.getHotelById(hotelId);
+        
         if (response.success) {
           setHotel(response.data);
+        } else {
+          // Gérer l'erreur retournée par l'API
+          setError(response.error || 'Erreur lors du chargement de l\'hôtel');
         }
       } catch (error) {
-        setError(error.response?.data?.message || 'Erreur lors du chargement de l\'hôtel');
+        console.error('Erreur lors du chargement de l\'hôtel:', error);
+        setError('Erreur lors du chargement de l\'hôtel. Veuillez réessayer plus tard.');
       } finally {
         setLoading(false);
       }
     };
 
-    if (hotelId) {
-      loadHotel();
-    }
+    // Lancer le chargement de l'hôtel
+    loadHotel();
   }, [hotelId]);
 
   useEffect(() => {
@@ -87,6 +99,12 @@ function CreateBooking() {
       setIsSubmitting(true);
       setError('');
 
+      // Vérifier que l'ID de l'hôtel est valide avant de soumettre
+      if (!hotelId) {
+        setError('ID d\'hôtel non spécifié. Veuillez sélectionner un hôtel valide.');
+        return;
+      }
+
       const bookingData = {
         hotelId,
         ...data,
@@ -96,10 +114,20 @@ function CreateBooking() {
       const response = await bookingApi.createBooking(bookingData);
       
       if (response.success) {
-        navigate('/bookings');
+        // Redirection avec message de succès
+        navigate('/bookings', { 
+          state: { 
+            successMessage: 'Réservation créée avec succès!',
+            bookingId: response.data?._id 
+          } 
+        });
+      } else {
+        // Afficher l'erreur retournée par l'API
+        setError(response.error || 'Erreur lors de la création de la réservation');
       }
     } catch (error) {
-      setError(error.response?.data?.message || 'Erreur lors de la création de la réservation');
+      console.error('Erreur lors de la création de la réservation:', error);
+      setError('Une erreur est survenue lors de la création de la réservation. Veuillez réessayer plus tard.');
     } finally {
       setIsSubmitting(false);
     }
@@ -116,8 +144,12 @@ function CreateBooking() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center p-8 bg-red-50 rounded-lg">
-          <p className="text-red-600 font-semibold">{error}</p>
+        <div className="text-center p-8 bg-red-50 rounded-lg shadow-md max-w-md w-full">
+          <svg className="h-12 w-12 text-red-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h2 className="text-xl font-bold text-red-700 mb-2">Erreur</h2>
+          <p className="text-red-600 mb-4">{error}</p>
           <button
             onClick={() => navigate('/hotels')}
             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"

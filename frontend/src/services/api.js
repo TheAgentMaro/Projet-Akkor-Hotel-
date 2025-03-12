@@ -220,11 +220,27 @@ export const hotelApi = {
   // Public : Détails d'un hôtel
   getHotelById: async (id) => {
     try {
+      // Vérifier si l'ID est valide
+      if (!id) {
+        console.error('Erreur getHotelById: ID d\'hôtel non défini');
+        return {
+          success: false,
+          error: 'ID d\'hôtel non défini',
+          status: 400,
+          data: null
+        };
+      }
+      
       const response = await axiosInstance.get(`/hotels/${id}`);
       return response;
     } catch (error) {
       console.error('Erreur getHotelById:', error);
-      throw error;
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Erreur lors du chargement de l\'hôtel',
+        status: error.response?.status || 500,
+        data: null
+      };
     }
   },
 
@@ -268,14 +284,28 @@ export const hotelApi = {
   // Admin : Créer un hôtel
   createHotel: async (formData) => {
     try {
+      // Vérifier que les données essentielles sont présentes
+      if (!formData.get('name') || !formData.get('location') || !formData.get('description')) {
+        return {
+          success: false,
+          error: 'Données manquantes pour la création de l\'hôtel',
+          status: 400
+        };
+      }
+      
       const response = await axiosInstance.post('/hotels', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
       // Retourner directement les données de la réponse
       return response.data;
     } catch (error) {
       console.error('Erreur createHotel:', error);
-      throw error;
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Erreur lors de la création de l\'hôtel',
+        status: error.response?.status || 500
+      };
     }
   },
 
@@ -358,11 +388,37 @@ export const bookingApi = {
   // User : Créer une réservation
   createBooking: async (bookingData) => {
     try {
+      // Vérifier que l'ID de l'hôtel est valide
+      if (!bookingData.hotelId) {
+        console.error('Erreur createBooking: ID d\'hôtel non défini');
+        return {
+          success: false,
+          error: 'ID d\'hôtel non défini ou invalide. Veuillez sélectionner un hôtel valide.',
+          status: 400,
+          data: null
+        };
+      }
+      
+      // Vérifier que les dates sont valides
+      if (!bookingData.checkIn || !bookingData.checkOut) {
+        return {
+          success: false,
+          error: 'Dates de réservation manquantes ou invalides.',
+          status: 400,
+          data: null
+        };
+      }
+      
       const response = await axiosInstance.post('/bookings', bookingData);
       return response;
     } catch (error) {
       console.error('Erreur createBooking:', error);
-      throw error;
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Erreur lors de la création de la réservation',
+        status: error.response?.status || 500,
+        data: null
+      };
     }
   },
 

@@ -57,17 +57,50 @@ const hotelController = {
   // Obtenir un hôtel par son ID
   async getHotelById(req, res, next) {
     try {
-      const hotel = await Hotel.findById(req.params.id);
-      if (!hotel) {
-        throw createError(404, 'Hôtel non trouvé');
+      // Vérifier si l'ID est valide
+      const hotelId = req.params.id;
+      
+      if (!hotelId || hotelId === 'undefined' || hotelId === 'null') {
+        return res.status(400).json({
+          success: false,
+          error: 'ID d\'hôtel invalide ou manquant',
+          data: null
+        });
       }
+      
+      // Utiliser try/catch spécifique pour la recherche par ID
+      try {
+        const hotel = await Hotel.findById(hotelId);
+        if (!hotel) {
+          return res.status(404).json({
+            success: false,
+            error: 'Hôtel non trouvé',
+            data: null
+          });
+        }
 
-      res.json({
-        success: true,
-        data: hotel
-      });
+        return res.json({
+          success: true,
+          data: hotel
+        });
+      } catch (idError) {
+        // Erreur spécifique au format de l'ID
+        if (idError.name === 'CastError') {
+          return res.status(400).json({
+            success: false,
+            error: 'Format d\'ID d\'hôtel invalide',
+            data: null
+          });
+        }
+        throw idError; // Relancer l'erreur si ce n'est pas une erreur de cast
+      }
     } catch (error) {
-      next(error);
+      console.error('Erreur getHotelById:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Erreur lors de la récupération de l\'hôtel',
+        data: null
+      });
     }
   },
 
