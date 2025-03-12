@@ -18,7 +18,17 @@ function Bookings() {
   const loadBookings = async () => {
     try {
       setLoading(true);
-      const response = await bookingApi.getAllBookings();
+      let response;
+      
+      // Utiliser la fonction appropriée selon le rôle de l'utilisateur
+      if (user.role === 'admin' || user.role === 'employee') {
+        // Pour les admins et employés : toutes les réservations
+        response = await bookingApi.getAllBookings();
+      } else {
+        // Pour les utilisateurs normaux : uniquement leurs réservations
+        response = await bookingApi.getUserBookings();
+      }
+      
       if (response.success) {
         setBookings(response.data);
       }
