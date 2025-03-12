@@ -14,10 +14,10 @@ const Layout = ({ children }) => {
     { path: '/hotels', label: 'Hôtels', public: true },
     { path: '/bookings', label: 'Mes Réservations', private: true },
     { path: '/profile', label: 'Mon Profil', private: true },
-    { path: '/admin/hotels', label: 'Gestion Hôtels', adminOnly: true },
-    { path: '/admin/users', label: 'Gestion Utilisateurs', adminOnly: true },
-    { path: '/employee/users', label: 'Recherche Utilisateurs', employeeOnly: true },
-    { path: '/employee/bookings', label: 'Réservations', employeeOnly: true }
+    { path: '/admin/hotels', label: 'Gestion Hôtels', role: 'admin' },
+    { path: '/admin/users', label: 'Gestion Utilisateurs', role: 'admin' },
+    { path: '/employee/users', label: 'Recherche Utilisateurs', role: ['admin', 'employee'] },
+    { path: '/employee/bookings', label: 'Gestion Réservations', role: ['admin', 'employee'] }
   ];
 
   const renderNavItems = () => {
@@ -27,19 +27,20 @@ const Layout = ({ children }) => {
         return renderNavLink(item);
       }
 
+      // Vérifier si l'utilisateur est connecté
+      if (!user) return null;
+
       // Items privés (visibles uniquement si connecté)
-      if (item.private && user) {
+      if (item.private) {
         return renderNavLink(item);
       }
 
-      // Items admin (visibles uniquement si l'utilisateur est admin)
-      if (item.adminOnly && user?.role === 'admin') {
-        return renderNavLink(item);
-      }
-
-      // Items employee (visibles pour les employés et admins)
-      if (item.employeeOnly && (user?.role === 'employee' || user?.role === 'admin')) {
-        return renderNavLink(item);
+      // Items basés sur les rôles
+      if (item.role) {
+        const roles = Array.isArray(item.role) ? item.role : [item.role];
+        if (roles.includes(user.role)) {
+          return renderNavLink(item);
+        }
       }
 
       return null;

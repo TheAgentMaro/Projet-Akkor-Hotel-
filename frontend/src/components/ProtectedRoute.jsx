@@ -4,8 +4,7 @@ import AuthContext from '../context/AuthContext';
 
 const ProtectedRoute = ({ 
   children, 
-  requireAdmin = false, 
-  requireEmployee = false,
+  roles = [], // ['admin', 'employee', 'user']
   allowAnonymous = false,
   requireAuth = true
 }) => {
@@ -59,8 +58,18 @@ const ProtectedRoute = ({
   }
 
   // Vérification des rôles
-  const isAdmin = user?.role === 'admin';
-  const isEmployee = user?.role === 'employee' || isAdmin; // Admin a aussi les droits employee
+  const hasRequiredRole = !roles.length || 
+    (user?.role === 'admin') || // Admin a accès à tout
+    (user?.role === 'employee' && roles.includes('employee')) || // Employee a accès aux routes employee
+    (roles.includes(user?.role)); // Vérification du rôle spécifique
+
+  if (!hasRequiredRole) {
+    return (
+      <AccessDenied 
+        message={`Cette page est réservée aux utilisateurs avec les rôles suivants : ${roles.join(', ')}. Votre rôle actuel (${user?.role}) ne permet pas d'y accéder.`}
+      />
+    );
+  }
 
   const AccessDenied = ({ message }) => (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -97,23 +106,7 @@ const ProtectedRoute = ({
     </div>
   );
 
-  // Si la route nécessite un admin
-  if (requireAdmin && !isAdmin) {
-    return (
-      <AccessDenied 
-        message="Cette page est réservée aux administrateurs. Votre rôle actuel ne permet pas d'y accéder." 
-      />
-    );
-  }
 
-  // Si la route nécessite un employé
-  if (requireEmployee && !isEmployee) {
-    return (
-      <AccessDenied 
-        message="Cette page est réservée aux employés. Votre rôle actuel ne permet pas d'y accéder." 
-      />
-    );
-  }
 
   return children;
 };

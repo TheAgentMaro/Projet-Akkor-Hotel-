@@ -15,7 +15,7 @@ function AdminHotels() {
     current: 1,
     limit: 10,
     total: 0,
-    pages: 0
+    pages: 1
   });
   
   // États pour le tri

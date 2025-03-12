@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { userApi, bookingApi } from '../services/api';
 import AuthContext from '../context/AuthContext';
 import * as yup from 'yup';
+import { useNavigate } from 'react-router-dom';
 
 const userSchema = yup.object().shape({
   email: yup.string().email('Email invalide').required('Email requis'),
@@ -11,7 +12,8 @@ const userSchema = yup.object().shape({
 });
 
 function AdminUsers() {
-  const { user } = useContext(AuthContext);
+  const { user, hasRole, roleBadgeColor, roleLabel } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -28,6 +30,14 @@ function AdminUsers() {
     role: 'user'
   });
   const [formErrors, setFormErrors] = useState({});
+
+  // Vérifier les permissions
+  useEffect(() => {
+    if (!hasRole('admin')) {
+      navigate('/');
+      return;
+    }
+  }, [hasRole, navigate]);
 
   useEffect(() => {
     loadUsers();
@@ -73,6 +83,10 @@ function AdminUsers() {
   const handleRoleChange = async (userId, newRole) => {
     if (userId === user.id) {
       setError('Vous ne pouvez pas modifier votre propre rôle');
+      return;
+    }
+
+    if (!window.confirm(`Êtes-vous sûr de vouloir modifier le rôle de cet utilisateur en "${roleLabel[newRole]}" ?`)) {
       return;
     }
 
@@ -131,17 +145,6 @@ function AdminUsers() {
     }
   };
 
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-red-100 text-red-800';
-      case 'employee':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-green-100 text-green-800';
-    }
-  };
-
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
       year: 'numeric',
@@ -154,8 +157,9 @@ function AdminUsers() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex flex-col justify-center items-center min-h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <p className="mt-4 text-gray-600">Chargement des utilisateurs...</p>
       </div>
     );
   }
@@ -166,8 +170,8 @@ function AdminUsers() {
         <h1 className="text-2xl font-bold">Gestion des Utilisateurs</h1>
         <div className="text-sm">
           <span className="text-gray-600">Connecté en tant que : </span>
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(user?.role)}`}>
-            {user?.role}
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleBadgeColor}`}>
+            {roleLabel}
           </span>
         </div>
       </div>
@@ -201,60 +205,69 @@ function AdminUsers() {
             <h2 className="text-lg font-semibold text-gray-800">Liste des utilisateurs</h2>
           </div>
           <div className="divide-y divide-gray-200">
-            {users.map((userItem) => (
+            {users.map(u => (
               <div
-                key={userItem.id}
-                className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150 ${
-                  selectedUser?.id === userItem.id ? 'bg-blue-50' : ''
+                key={u.id}
+                className={`px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150 ${
+                  selectedUser?.id === u.id ? 'bg-blue-50' : ''
                 }`}
-                onClick={() => handleUserSelect(userItem)}
+                onClick={() => handleUserSelect(u)}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-lg font-medium text-gray-900">{userItem.pseudo}</h3>
-                    <p className="text-sm text-gray-500">{userItem.email}</p>
+                    <p className="font-medium text-gray-900">{u.pseudo}</p>
+                    <p className="text-sm text-gray-500">{u.email}</p>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(userItem.role)}`}>
-                    {userItem.role}
-                  </span>
-                </div>
-                <div className="mt-2 text-sm text-gray-600">
-                  Inscrit le {formatDate(userItem.createdAt)}
+                  <div className="flex items-center space-x-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleBadgeColor[u.role]}`}>
+                      {roleLabel[u.role]}
+                    </span>
+                    {u.id !== user.id && (
+                      <select
+                        value={u.role}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        className="text-sm border rounded px-2 py-1"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="user">Utilisateur</option>
+                        <option value="employee">Employé</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Détails et édition de l'utilisateur */}
+        {/* Détails de l'utilisateur sélectionné */}
         {selectedUser && (
           <div className="bg-white shadow-lg rounded-lg overflow-hidden">
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold text-gray-800">
-                  {editMode ? 'Modifier l\'utilisateur' : 'Détails de l\'utilisateur'}
+                  Détails de l'utilisateur
                 </h2>
                 <div className="space-x-2">
-                  {!editMode && (
-                    <>
-                      <button
-                        onClick={() => setEditMode(true)}
-                        className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
-                        disabled={selectedUser.id === user.id}
-                      >
-                        Supprimer
-                      </button>
-                    </>
+                  <button
+                    onClick={() => setEditMode(!editMode)}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  >
+                    {editMode ? 'Annuler' : 'Modifier'}
+                  </button>
+                  {selectedUser.id !== user.id && (
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                    >
+                      Supprimer
+                    </button>
                   )}
                 </div>
               </div>
             </div>
+
             <div className="p-6">
               {editMode ? (
                 <form onSubmit={handleEditSubmit} className="space-y-4">
@@ -270,6 +283,7 @@ function AdminUsers() {
                       <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
                     )}
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Pseudo</label>
                     <input
@@ -282,6 +296,7 @@ function AdminUsers() {
                       <p className="mt-1 text-sm text-red-600">{formErrors.pseudo}</p>
                     )}
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
                       Nouveau mot de passe (laisser vide pour ne pas modifier)
@@ -296,13 +311,13 @@ function AdminUsers() {
                       <p className="mt-1 text-sm text-red-600">{formErrors.password}</p>
                     )}
                   </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Rôle</label>
                     <select
                       value={editForm.role}
                       onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      disabled={selectedUser.id === user.id}
                     >
                       <option value="user">Utilisateur</option>
                       <option value="employee">Employé</option>
@@ -312,90 +327,73 @@ function AdminUsers() {
                       <p className="mt-1 text-sm text-red-600">{formErrors.role}</p>
                     )}
                   </div>
-                  <div className="flex justify-end space-x-3 pt-4">
+
+                  <div className="flex justify-end space-x-2">
                     <button
                       type="button"
                       onClick={() => setEditMode(false)}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                      className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50"
                     >
                       Annuler
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
                     >
                       Enregistrer
                     </button>
                   </div>
                 </form>
               ) : (
-                <>
-                  <div className="mb-6">
-                    <h3 className="text-xl font-medium text-gray-900 mb-4">
-                      {selectedUser.pseudo}
-                      <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getRoleBadgeColor(selectedUser.role)}`}>
-                        {selectedUser.role}
-                      </span>
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500">Email</p>
-                        <p className="font-medium">{selectedUser.email}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Date d'inscription</p>
-                        <p className="font-medium">{formatDate(selectedUser.createdAt)}</p>
-                      </div>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-medium">Informations</h3>
+                    <div className="mt-2 space-y-2">
+                      <p><span className="font-medium">Email:</span> {selectedUser.email}</p>
+                      <p><span className="font-medium">Pseudo:</span> {selectedUser.pseudo}</p>
+                      <p>
+                        <span className="font-medium">Rôle:</span>{' '}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleBadgeColor[selectedUser.role]}`}>
+                          {roleLabel[selectedUser.role]}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="font-medium">Créé le:</span>{' '}
+                        {formatDate(selectedUser.createdAt)}
+                      </p>
                     </div>
                   </div>
 
-                  <div>
-                    <h4 className="text-lg font-medium text-gray-900 mb-4">Réservations</h4>
-                    {loadingBookings ? (
-                      <div className="flex justify-center items-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                      </div>
-                    ) : userBookings.length > 0 ? (
-                      <div className="space-y-4">
-                        {userBookings.map((booking) => (
-                          <div key={booking.id} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <h5 className="font-medium">{booking.hotel?.name}</h5>
-                                <p className="text-sm text-gray-600">{booking.hotel?.location}</p>
-                              </div>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                                booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {booking.status}
-                              </span>
+                  {loadingBookings ? (
+                    <div className="flex justify-center py-4">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="text-lg font-medium">Réservations</h3>
+                      {userBookings.length === 0 ? (
+                        <p className="text-gray-500 mt-2">Aucune réservation</p>
+                      ) : (
+                        <div className="mt-2 space-y-2">
+                          {userBookings.map(booking => (
+                            <div
+                              key={booking.id}
+                              className="p-3 bg-gray-50 rounded-lg"
+                            >
+                              <p className="font-medium">{booking.hotel.name}</p>
+                              <p className="text-sm text-gray-600">
+                                Du {formatDate(booking.checkIn)} au {formatDate(booking.checkOut)}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Status: {booking.status}
+                              </p>
                             </div>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div>
-                                <p className="text-gray-500">Check-in</p>
-                                <p>{formatDate(booking.checkIn)}</p>
-                              </div>
-                              <div>
-                                <p className="text-gray-500">Check-out</p>
-                                <p>{formatDate(booking.checkOut)}</p>
-                              </div>
-                            </div>
-                            <div className="mt-2 text-sm">
-                              <p className="text-gray-500">Prix total</p>
-                              <p className="font-medium">{booking.totalPrice}€</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 text-gray-500">
-                        Aucune réservation trouvée
-                      </div>
-                    )}
-                  </div>
-                </>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -404,24 +402,24 @@ function AdminUsers() {
 
       {/* Modal de confirmation de suppression */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Confirmer la suppression</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium mb-4">Confirmer la suppression</h3>
             <p className="text-gray-600 mb-6">
               Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50"
               >
                 Annuler
               </button>
               <button
                 onClick={handleDeleteUser}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
               >
-                Confirmer la suppression
+                Supprimer
               </button>
             </div>
           </div>
