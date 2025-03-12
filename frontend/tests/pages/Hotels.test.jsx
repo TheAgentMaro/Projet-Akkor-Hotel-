@@ -70,8 +70,9 @@ describe('Hotels Component', () => {
       </AuthContext.Provider>
     );
 
-    // Vérifier l'indicateur de chargement
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    // Vérifier l'indicateur de chargement (div avec la classe animate-spin)
+    const loadingElement = document.querySelector('.animate-spin');
+    expect(loadingElement).toBeInTheDocument();
 
     // Attendre que les hôtels soient affichés
     await waitFor(() => {
