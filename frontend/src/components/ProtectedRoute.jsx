@@ -1,53 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { userApi } from '../services/api';
+import AuthContext from '../context/AuthContext';
 
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState(null);
+  const { user } = useContext(AuthContext);
   const location = useLocation();
 
-  useEffect(() => {
-    const verifyAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setIsAuthenticated(false);
-        setIsLoading(false);
-        return;
-      }
+  console.log('Protected Route - User:', user); // Pour déboguer
+  console.log('Protected Route - Required Admin:', requireAdmin); // Pour déboguer
 
-      try {
-        const response = await userApi.getProfile();
-        setIsAuthenticated(true);
-        setUserRole(response.data.role);
-      } catch (error) {
-        console.error('Auth verification failed:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    verifyAuth();
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
+  // Si l'utilisateur n'est pas connecté
+  if (!user) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  if (requireAdmin && userRole !== 'admin') {
-    return <Navigate to="/" replace />;
+  // Si la route nécessite un admin et que l'utilisateur n'est pas admin
+  if (requireAdmin && user.role !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8 bg-white rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Accès refusé</h2>
+          <p className="text-gray-600 mb-4">Cette page est réservée aux administrateurs.</p>
+          <Navigate to="/" replace />
+        </div>
+      </div>
+    );
   }
 
   return children;

@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react'; // Ajouter useContext ici
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Yup from 'yup';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../../services/api';
+import AuthContext from '../../context/AuthContext';
 
 function Login() {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext); // Maintenant useContext est défini
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -17,15 +19,15 @@ function Login() {
       .email('Format email invalide'),
     password: Yup.string()
       .required('Mot de passe requis')
-      .min(6, 'Minimum 6 caractères')
+      .min(6, 'Minimum 6 caractères'),
   });
 
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors },
   } = useForm({
-    resolver: yupResolver(validationSchema)
+    resolver: yupResolver(validationSchema),
   });
 
   const onSubmit = async (data) => {
@@ -33,17 +35,33 @@ function Login() {
       setIsLoading(true);
       setErrorMessage('');
       setSuccessMessage('');
-      
+  
       const response = await authApi.login(data.email, data.password);
-      localStorage.setItem('token', response.data.token);
+      console.log('Réponse API:', response); // Pour déboguer
       
-      setSuccessMessage('Connexion réussie !');
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
+      if (response.success && response.data) {
+        // S'assurer que nous avons les bonnes données
+        const userData = response.data.user || response.data;
+        const token = response.data.token || response.token;
+        
+        if (!userData || !token) {
+          throw new Error('Données de connexion invalides');
+        }
+  
+        // Mettre à jour le contexte avec les données utilisateur
+        login(userData, token);
+        
+        setSuccessMessage('Connexion réussie !');
+        setTimeout(() => {
+          navigate('/');
+        }, 1500);
+      } else {
+        throw new Error('Erreur de connexion');
+      }
     } catch (error) {
+      console.error('Erreur de connexion:', error);
       setErrorMessage(
-        error.response?.data?.message || 'Erreur lors de la connexion'
+        error.response?.data?.message || error.message || 'Erreur lors de la connexion'
       );
     } finally {
       setIsLoading(false);

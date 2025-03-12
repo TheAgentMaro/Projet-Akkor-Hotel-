@@ -1,35 +1,40 @@
 import React, { createContext, useState, useEffect } from 'react';
+import { userApi } from '../services/api';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      // Fetch user data with the token
-      fetchUserData(token);
-    }
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await userApi.getProfile();
+          if (response.success && response.data) {
+            setUser(response.data);
+          }
+        } catch (error) {
+          console.error('Erreur lors de la récupération du profil:', error);
+          localStorage.removeItem('token');
+        }
+      }
+      setLoading(false);
+    };
+  
+    initializeAuth();
   }, []);
 
-  const fetchUserData = async (token) => {
-    try {
-      const response = await fetch(`${process.env.VITE_API_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      setUser(data.user);
-    } catch (error) {
-      console.error('Failed to fetch user data', error);
-    }
-  };
-
   const login = (userData, token) => {
+    if (!userData || !token) {
+      console.error('Données de connexion invalides');
+      return;
+    }
     localStorage.setItem('token', token);
     setUser(userData);
+    console.log('Utilisateur connecté:', userData); // Pour déboguer
   };
 
   const logout = () => {
@@ -37,8 +42,12 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  if (loading) {
+    return <div>Chargement...</div>;
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
