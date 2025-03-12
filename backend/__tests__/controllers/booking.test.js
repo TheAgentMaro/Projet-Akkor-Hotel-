@@ -80,9 +80,6 @@ describe('Booking Controller', () => {
       hotel: hotelId
     });
     bookingId = booking._id;
-    
-    // Afficher les informations pour le débogage
-    console.log(`Test setup: userId=${userId}, bookingId=${bookingId}, booking.user=${booking.user}`);
   });
 
   describe('POST /api/bookings', () => {
@@ -140,10 +137,11 @@ describe('Booking Controller', () => {
       const res = await request(app)
         .get(`/api/bookings/${bookingId}`)
         .set('Authorization', `Bearer ${userToken}`);
-    
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data._id.toString()).toBe(bookingId.toString()); // Ajustez ici
+      
+      expect(res.statusCode).toBe(200, `Unexpected status code: ${res.statusCode}, body: ${JSON.stringify(res.body)}`);
+      expect(res.body.success).toBe(true, `Success flag not true: ${JSON.stringify(res.body)}`);
+      expect(res.body.data).toBeDefined(`Data is undefined: ${JSON.stringify(res.body)}`);
+      expect(res.body.data._id.toString()).toBe(bookingId.toString());
     });
 
     it('should get booking by id for admin', async () => {
@@ -165,25 +163,26 @@ describe('Booking Controller', () => {
           numberOfGuests: 3,
           specialRequests: 'Updated request'
         });
-    
+      
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.numberOfGuests).toBe(3);
       expect(res.body.data.specialRequests).toBe('Updated request');
     });
+  
 
     it('should not update booking dates to invalid values', async () => {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       yesterday.setHours(12, 0, 0, 0);
-
+  
       const res = await request(app)
         .put(`/api/bookings/${bookingId}`)
         .set('Authorization', `Bearer ${userToken}`)
         .send({
           checkIn: yesterday.toISOString()
         });
-
+  
       expect(res.statusCode).toBe(400);
     });
   });

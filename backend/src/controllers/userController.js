@@ -4,7 +4,6 @@ const createError = require('http-errors');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supinfo';
 
-// Générer un JWT Token
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
@@ -14,27 +13,15 @@ const generateToken = (user) => {
 };
 
 const userController = {
-  // Créer un nouvel utilisateur
   async register(req, res, next) {
     try {
       const { email, pseudo, password } = req.body;
-
-      // Vérifier si l'email existe déjà
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         throw createError(409, 'Cet email est déjà utilisé');
       }
-
-      // Créer l'utilisateur
-      const user = await User.create({
-        email,
-        pseudo,
-        password
-      });
-
-      // Générer le token
+      const user = await User.create({ email, pseudo, password });
       const token = generateToken(user);
-
       res.status(201).json({
         success: true,
         data: user.toJSON(),
@@ -45,26 +32,18 @@ const userController = {
     }
   },
 
-  // Connexion utilisateur
   async login(req, res, next) {
     try {
       const { email, password } = req.body;
-
-      // Vérifier si l'utilisateur existe
       const user = await User.findOne({ email }).select('+password');
       if (!user) {
         throw createError(401, 'Email ou mot de passe incorrect');
       }
-
-      // Vérifier le mot de passe
       const isMatch = await user.comparePassword(password);
       if (!isMatch) {
         throw createError(401, 'Email ou mot de passe incorrect');
       }
-
-      // Générer le token
       const token = generateToken(user);
-
       res.json({
         success: true,
         data: user.toJSON(),
@@ -75,14 +54,12 @@ const userController = {
     }
   },
 
-  // Obtenir le profil de l'utilisateur connecté
   async getProfile(req, res, next) {
     try {
       const user = await User.findById(req.user.id);
       if (!user) {
         throw createError(404, 'Utilisateur non trouvé');
       }
-
       res.json({
         success: true,
         data: user.toJSON()
@@ -92,19 +69,12 @@ const userController = {
     }
   },
 
-  // Obtenir un utilisateur par ID (admin ou propriétaire uniquement)
   async getUserById(req, res, next) {
     try {
-      // Vérifier les permissions
-      if (req.user.role !== 'admin' && req.user.id !== req.params.id) {
-        throw createError(403, 'Non autorisé');
-      }
-
       const user = await User.findById(req.params.id);
       if (!user) {
         throw createError(404, 'Utilisateur non trouvé');
       }
-
       res.json({
         success: true,
         data: user.toJSON()
@@ -114,31 +84,23 @@ const userController = {
     }
   },
 
-  // Mettre à jour un utilisateur (admin ou propriétaire uniquement)
   async updateUser(req, res, next) {
     try {
-      // Vérifier les permissions
-      if (req.user.role !== 'admin' && req.user.id !== req.params.id) {
-        throw createError(403, 'Non autorisé');
-      }
-
+      const userId = req.params.id || req.user.id; // Utiliser req.user.id pour /me
       const { email, pseudo, password } = req.body;
       const updateData = {};
-      
       if (email) updateData.email = email;
       if (pseudo) updateData.pseudo = pseudo;
       if (password) updateData.password = password;
 
       const user = await User.findByIdAndUpdate(
-        req.params.id,
+        userId,
         updateData,
         { new: true, runValidators: true }
       );
-
       if (!user) {
         throw createError(404, 'Utilisateur non trouvé');
       }
-
       res.json({
         success: true,
         data: user.toJSON()
@@ -148,21 +110,14 @@ const userController = {
     }
   },
 
-  // Supprimer un utilisateur (admin ou propriétaire uniquement)
   async deleteUser(req, res, next) {
     try {
-      // Vérifier les permissions
-      if (req.user.role !== 'admin' && req.user.id !== req.params.id) {
-        throw createError(403, 'Non autorisé');
-      }
-
-      const user = await User.findById(req.params.id);
+      const userId = req.params.id || req.user.id; // Utiliser req.user.id pour /me
+      const user = await User.findById(userId);
       if (!user) {
         throw createError(404, 'Utilisateur non trouvé');
       }
-
       await user.deleteOne();
-
       res.json({
         success: true,
         message: 'Utilisateur supprimé avec succès'
@@ -172,27 +127,19 @@ const userController = {
     }
   },
 
-  // Liste des utilisateurs (admin uniquement) ou recherche (admin/employé)
   async getAllUsers(req, res, next) {
     try {
-      // Vérifier si c'est une requête de recherche
       const isSearchRequest = req.path === '/search' || req.query.query;
-      
-      // Vérifier les permissions
       if (!isSearchRequest && req.user.role !== 'admin') {
         throw createError(403, 'Non autorisé - Réservé aux administrateurs');
       }
-      
-      // Si c'est une recherche, vérifier que l'utilisateur est admin ou employé
       if (isSearchRequest && !['admin', 'employee'].includes(req.user.role)) {
         throw createError(403, 'Non autorisé - Réservé aux administrateurs et employés');
       }
 
-      // Construire la requête de recherche si nécessaire
       let query = {};
       if (isSearchRequest && req.query.query) {
         const searchTerm = req.query.query.trim();
-        // Recherche insensible à la casse sur email et pseudo
         query = {
           $or: [
             { email: { $regex: searchTerm, $options: 'i' } },
@@ -202,7 +149,6 @@ const userController = {
       }
 
       const users = await User.find(query);
-      
       res.json({
         success: true,
         data: users.map(user => user.toJSON())

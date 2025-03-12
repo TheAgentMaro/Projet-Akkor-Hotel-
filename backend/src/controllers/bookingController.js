@@ -1,13 +1,10 @@
 const Booking = require('../models/Booking');
 const User = require('../models/User');
 const createError = require('http-errors');
-const { hasAccessInTest } = require('../utils/testUtils');
 
 const bookingController = {
-  // Créer une réservation
   async createBooking(req, res, next) {
     try {
-      // Valider les dates avant de créer la réservation
       const now = new Date();
       now.setHours(0, 0, 0, 0);
 
@@ -18,7 +15,7 @@ const bookingController = {
       checkOut.setHours(0, 0, 0, 0);
 
       if (checkIn < now) {
-        throw createError(400, 'La date d\'arrivée ne peut pas être dans le passé');
+        throw createError(400, "La date d'arrivée ne peut pas être dans le passé");
       }
 
       if (checkIn >= checkOut) {
@@ -45,7 +42,6 @@ const bookingController = {
     }
   },
 
-  // Obtenir toutes les réservations (admin uniquement)
   async getAllBookings(req, res, next) {
     try {
       const { 
@@ -57,15 +53,12 @@ const bookingController = {
         search
       } = req.query;
 
-      // Construire la requête
       let query = {};
       
-      // Filtrer par statut si spécifié
       if (status) {
         query.status = status;
       }
 
-      // Recherche par email/nom d'utilisateur si spécifié
       if (search) {
         const users = await User.find({
           $or: [
@@ -76,10 +69,8 @@ const bookingController = {
         query.user = { $in: users.map(u => u._id) };
       }
 
-      // Calculer le skip pour la pagination
       const skip = (page - 1) * limit;
 
-      // Exécuter la requête
       const bookings = await Booking.find(query)
         .sort({ [sort]: order === 'desc' ? -1 : 1 })
         .limit(parseInt(limit))
@@ -87,7 +78,6 @@ const bookingController = {
         .populate('user', 'email pseudo')
         .populate('hotel', 'name location');
 
-      // Compter le total pour la pagination
       const total = await Booking.countDocuments(query);
 
       res.json({
@@ -105,7 +95,6 @@ const bookingController = {
     }
   },
 
-  // Obtenir les réservations de l'utilisateur connecté
   async getUserBookings(req, res, next) {
     try {
       const bookings = await Booking.find({ user: req.user.id })
@@ -120,45 +109,32 @@ const bookingController = {
     }
   },
 
-  // Obtenir une réservation par ID
   async getBookingById(req, res, next) {
     try {
       const booking = await Booking.findById(req.params.id)
         .populate('user', 'email pseudo')
         .populate('hotel', 'name location');
-
+  
       if (!booking) {
         throw createError(404, 'Réservation non trouvée');
       }
-
-      // Traitement spécial pour l'environnement de test
-      if (process.env.NODE_ENV === 'test') {
-        // Dans les tests, on autorise toujours l'accès pour simplifier
-        return res.json({
-          success: true,
-          data: booking
-        });
-      }
-      
-      // En production/développement, vérification normale des permissions
+  
       const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
-      const requestUserId = req.user._id ? req.user._id.toString() : req.user.id.toString();
-      
-      if (req.user.role === 'admin' || bookingUserId === requestUserId) {
-        return res.json({
-          success: true,
-          data: booking
-        });
+      const requestUserId = req.user.id.toString();
+  
+      if (req.user.role !== 'admin' && bookingUserId !== requestUserId) {
+        throw createError(403, 'Non autorisé');
       }
-
-      // Si on arrive ici, l'accès est refusé
-      throw createError(403, 'Non autorisé');
+  
+      res.json({
+        success: true,
+        data: booking.toJSON() // Convertir en JSON brut
+      });
     } catch (error) {
       next(error);
     }
   },
 
-  // Mettre à jour une réservation
   async updateBooking(req, res, next) {
     try {
       const booking = await Booking.findById(req.params.id);
@@ -167,30 +143,12 @@ const bookingController = {
         throw createError(404, 'Réservation non trouvée');
       }
 
-      // Traitement spécial pour l'environnement de test
-      if (process.env.NODE_ENV === 'test') {
-        // Dans les tests, on vérifie uniquement les dates invalides
-        const { checkIn, checkOut } = req.body;
-        
-        if (checkIn) {
-          const checkInDate = new Date(checkIn);
-          const now = new Date();
-          now.setHours(0, 0, 0, 0);
-          
-          if (checkInDate < now) {
-            throw createError(400, 'La date d\'arrivée ne peut pas être dans le passé');
-          }
-        }
-        
-        // Autoriser la mise à jour pour les tests
-      } else {
-        // En production/développement, vérification normale des permissions
-        const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
-        const requestUserId = req.user._id ? req.user._id.toString() : req.user.id.toString();
-        
-        if (req.user.role !== 'admin' && bookingUserId !== requestUserId) {
-          throw createError(403, 'Non autorisé');
-        }
+      // Normaliser les IDs pour la comparaison
+      const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
+      const requestUserId = req.user.id.toString(); // Toujours utiliser req.user.id
+
+      if (req.user.role !== 'admin' && bookingUserId !== requestUserId) {
+        throw createError(403, 'Non autorisé');
       }
 
       // Valider les dates si elles sont modifiées
@@ -205,7 +163,7 @@ const bookingController = {
         checkOut.setHours(0, 0, 0, 0);
 
         if (checkIn < now) {
-          throw createError(400, 'La date d\'arrivée ne peut pas être dans le passé');
+          throw createError(400, "La date d'arrivée ne peut pas être dans le passé");
         }
 
         if (checkIn >= checkOut) {
@@ -213,7 +171,6 @@ const bookingController = {
         }
       }
 
-      // Ne pas permettre la modification de l'utilisateur ou de l'hôtel
       delete req.body.user;
       delete req.body.hotel;
 
@@ -236,7 +193,6 @@ const bookingController = {
     }
   },
 
-  // Annuler une réservation
   async cancelBooking(req, res, next) {
     try {
       const booking = await Booking.findById(req.params.id);
@@ -245,17 +201,11 @@ const bookingController = {
         throw createError(404, 'Réservation non trouvée');
       }
 
-      // Traitement spécial pour l'environnement de test
-      if (process.env.NODE_ENV === 'test') {
-        // Dans les tests, on autorise toujours l'annulation
-      } else {
-        // En production/développement, vérification normale des permissions
-        const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
-        const requestUserId = req.user._id ? req.user._id.toString() : req.user.id.toString();
-        
-        if (req.user.role !== 'admin' && bookingUserId !== requestUserId) {
-          throw createError(403, 'Non autorisé');
-        }
+      const bookingUserId = booking.user._id ? booking.user._id.toString() : booking.user.toString();
+      const requestUserId = req.user.id.toString();
+
+      if (req.user.role !== 'admin' && bookingUserId !== requestUserId) {
+        throw createError(403, 'Non autorisé');
       }
 
       booking.status = 'cancelled';
@@ -270,7 +220,6 @@ const bookingController = {
     }
   },
 
-  // Supprimer une réservation (admin uniquement)
   async deleteBooking(req, res, next) {
     try {
       const booking = await Booking.findById(req.params.id);
