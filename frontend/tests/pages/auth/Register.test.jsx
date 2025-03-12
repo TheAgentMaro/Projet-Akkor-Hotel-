@@ -1,11 +1,33 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import Register from '../../../src/pages/auth/Register';
+import AuthContext from '../../../src/context/AuthContext';
 import axios from 'axios';
 
 vi.mock('axios');
-vi.mock('axios');
+
+// Mock de useNavigate
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate
+  };
+});
+
+// Import de l'API avant le mock
+import { authApi } from '../../../src/services/api';
+
+// Mock de l'API d'authentification
+vi.mock('../../../src/services/api', () => ({
+  authApi: {
+    register: vi.fn(),
+    login: vi.fn()
+  }
+}));
 
 describe('Register Page', () => {
   beforeEach(() => {
@@ -18,19 +40,42 @@ describe('Register Page', () => {
   });
 
   it('inscrit un nouvel utilisateur avec succès', async () => {
-    axios.post.mockResolvedValueOnce({
+    // Mock des réponses de l'API
+    authApi.register.mockResolvedValueOnce({
+      success: true,
       data: {
-        success: true,
-        data: {
-          email: 'newuser@example.com',
-          pseudo: 'newUser',
-          role: 'user'
-        },
-        token: 'FAKE_REGISTER_TOKEN',
+        email: 'newuser@example.com',
+        pseudo: 'newUser',
+        role: 'user'
       },
+      token: 'FAKE_REGISTER_TOKEN',
+    });
+    
+    authApi.login.mockResolvedValueOnce({
+      success: true,
+      data: {
+        email: 'newuser@example.com',
+        pseudo: 'newUser',
+        role: 'user'
+      },
+      token: 'FAKE_REGISTER_TOKEN',
     });
 
-    render(<Register />);
+    // Mock du contexte d'authentification
+    const mockAuthContext = {
+      user: null,
+      login: vi.fn().mockResolvedValue(undefined),
+      logout: vi.fn(),
+      isAuthenticated: false
+    };
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <MemoryRouter>
+          <Register />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
 
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: 'newuser@example.com' },
@@ -47,20 +92,38 @@ describe('Register Page', () => {
     await waitFor(() => {
       expect(screen.getByText(/Inscription réussie ! Connexion en cours.../i)).toBeInTheDocument();
     });
-
-    expect(localStorage.getItem('token')).toBe('FAKE_REGISTER_TOKEN');
+    
+    expect(authApi.register).toHaveBeenCalledWith('newuser@example.com', 'newUser', 'password123');
+    expect(authApi.login).toHaveBeenCalledWith('newuser@example.com', 'password123');
+    expect(mockAuthContext.login).toHaveBeenCalled();
   });
 
   it('affiche une erreur si l\'email est déjà utilisé', async () => {
-    axios.post.mockRejectedValueOnce({
+    // Mock de l'erreur d'API
+    const errorMessage = 'Cet email est déjà utilisé';
+    authApi.register.mockRejectedValueOnce({
       response: {
         data: {
-          error: 'Cet email est déjà utilisé',
-        },
-      },
+          error: errorMessage
+        }
+      }
     });
 
-    render(<Register />);
+    // Mock du contexte d'authentification
+    const mockAuthContext = {
+      user: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      isAuthenticated: false
+    };
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <MemoryRouter>
+          <Register />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
 
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: 'existing@test.com' },
@@ -75,14 +138,30 @@ describe('Register Page', () => {
     fireEvent.click(screen.getByRole('button', { name: /Créer un compte/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Cet email est déjà utilisé/i)).toBeInTheDocument();
+      expect(screen.getByText(errorMessage)).toBeInTheDocument();
     });
-
-    expect(localStorage.getItem('token')).toBeNull();
+    
+    expect(authApi.register).toHaveBeenCalledWith('existing@test.com', 'existingUser', 'password123');
+    expect(authApi.login).not.toHaveBeenCalled();
+    expect(mockAuthContext.login).not.toHaveBeenCalled();
   });
 
   it('affiche des messages d\'erreur de validation pour les champs requis', async () => {
-    render(<Register />);
+    // Mock du contexte d'authentification
+    const mockAuthContext = {
+      user: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      isAuthenticated: false
+    };
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <MemoryRouter>
+          <Register />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /Créer un compte/i }));
 
@@ -94,7 +173,21 @@ describe('Register Page', () => {
   });
 
   it('affiche un message d\'erreur pour un format d\'email invalide', async () => {
-    render(<Register />);
+    // Mock du contexte d'authentification
+    const mockAuthContext = {
+      user: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      isAuthenticated: false
+    };
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <MemoryRouter>
+          <Register />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
 
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: 'invalid-email' },
@@ -114,7 +207,21 @@ describe('Register Page', () => {
   });
 
   it('affiche un message d\'erreur pour un mot de passe trop court', async () => {
-    render(<Register />);
+    // Mock du contexte d'authentification
+    const mockAuthContext = {
+      user: null,
+      login: vi.fn(),
+      logout: vi.fn(),
+      isAuthenticated: false
+    };
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <MemoryRouter>
+          <Register />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
 
     fireEvent.change(screen.getByLabelText(/Email/i), {
       target: { value: 'newuser@example.com' },

@@ -57,17 +57,20 @@ describe('Profile Page', () => {
       success: true,
       data: { id: 'USER_ID_123', email: 'old@test.com', pseudo: 'OldPseudo' },
     });
+    
     // Simule la réponse de la mise à jour
     userApi.updateProfile.mockResolvedValueOnce({
       success: true,
       data: { id: 'USER_ID_123', email: 'updated@test.com', pseudo: 'UpdatedPseudo' },
     });
 
+    // Création d'un mock pour le contexte d'authentification
+    const mockUser = { id: 'USER_ID_123', email: 'old@test.com', pseudo: 'OldPseudo', role: 'user' };
     const mockLogout = vi.fn();
     
     render(
       <AuthContext.Provider value={{ 
-        user: { id: 'USER_ID_123', email: 'old@test.com', pseudo: 'OldPseudo', role: 'user' },
+        user: mockUser,
         logout: mockLogout
       }}>
         <MemoryRouter>
@@ -78,21 +81,25 @@ describe('Profile Page', () => {
 
     // Attendre que le profil initial soit chargé
     await waitFor(() => {
-      const emailInput = screen.getByRole('textbox', { name: /Email/i });
-      expect(emailInput).toHaveValue('old@test.com');
+      expect(screen.getByDisplayValue('old@test.com')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('OldPseudo')).toBeInTheDocument();
     });
 
     // Modifier les valeurs
-    const emailInput = screen.getByRole('textbox', { name: /Email/i });
-    const pseudoInput = screen.getByRole('textbox', { name: /Pseudo/i });
+    const emailInput = screen.getByLabelText(/Email/i);
+    const pseudoInput = screen.getByLabelText(/Pseudo/i);
     const passwordInput = screen.getByLabelText(/Mot de passe actuel/i);
 
-    fireEvent.change(emailInput, { target: { value: 'updated@test.com' } });
-    fireEvent.change(pseudoInput, { target: { value: 'UpdatedPseudo' } });
-    fireEvent.change(passwordInput, { target: { value: 'password123' } });
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, 'updated@test.com');
+    
+    await userEvent.clear(pseudoInput);
+    await userEvent.type(pseudoInput, 'UpdatedPseudo');
+    
+    await userEvent.type(passwordInput, 'password123');
 
     // Soumettre le formulaire via le clic sur le bouton
-    fireEvent.click(screen.getByRole('button', { name: /Mettre à jour/i }));
+    await userEvent.click(screen.getByRole('button', { name: /Mettre à jour/i }));
 
     // Vérifier que updateProfile est appelé avec les bonnes données
     await waitFor(() => {
@@ -102,6 +109,11 @@ describe('Profile Page', () => {
         currentPassword: 'password123',
         newPassword: undefined
       });
+    });
+    
+    // Vérifier que le message de succès s'affiche
+    await waitFor(() => {
+      expect(screen.getByText('Profil mis à jour avec succès !')).toBeInTheDocument();
     });
   });
 
