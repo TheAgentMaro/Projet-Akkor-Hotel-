@@ -59,18 +59,22 @@ function CreateBooking() {
         setError('');
         
         // Vérifier si l'ID de l'hôtel est valide
-        if (!hotelId) {
-          setError('ID d\'hôtel non spécifié. Veuillez sélectionner un hôtel valide.');
+        if (!hotelId || hotelId === 'undefined') {
+          setError('ID d\'hôtel non spécifié ou invalide. Veuillez retourner à la liste des hôtels et sélectionner un hôtel valide.');
+          console.error('ID d\'hôtel invalide ou non spécifié:', hotelId);
           return;
         }
         
+        console.log('Chargement de l\'hôtel avec ID:', hotelId);
         const response = await hotelApi.getHotelById(hotelId);
         
         if (response.success) {
           setHotel(response.data);
+          console.log('Hôtel chargé avec succès:', response.data);
         } else {
           // Gérer l'erreur retournée par l'API
           setError(response.error || 'Erreur lors du chargement de l\'hôtel');
+          console.error('Erreur API lors du chargement de l\'hôtel:', response.error);
         }
       } catch (error) {
         console.error('Erreur lors du chargement de l\'hôtel:', error);

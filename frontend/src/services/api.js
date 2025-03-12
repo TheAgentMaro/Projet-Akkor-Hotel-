@@ -210,10 +210,40 @@ export const hotelApi = {
       const response = await axiosInstance.get('/hotels', {
         params: { page, limit, sort, order }
       });
+      
+      // Normaliser les données pour s'assurer que chaque hôtel a un ID accessible
+      if (response.success && response.data) {
+        // Transformer les données pour s'assurer que l'ID est accessible via la propriété id
+        const normalizedHotels = response.data.map(hotel => {
+          // S'assurer que l'hôtel a une propriété id accessible
+          // Mongoose utilise _id, mais nous voulons aussi id pour la cohérence
+          const normalizedHotel = { ...hotel };
+          
+          // Si l'hôtel a _id mais pas id, ajouter id
+          if (hotel._id && !hotel.id) {
+            normalizedHotel.id = hotel._id;
+          }
+          // Si l'hôtel a id mais pas _id, ajouter _id
+          else if (hotel.id && !hotel._id) {
+            normalizedHotel._id = hotel.id;
+          }
+          
+          return normalizedHotel;
+        });
+        
+        // Remplacer les données originales par les données normalisées
+        response.data = normalizedHotels;
+      }
+      
       return response;
     } catch (error) {
       console.error('Erreur getAllHotels:', error);
-      throw error;
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Erreur lors du chargement des hôtels',
+        status: error.response?.status || 500,
+        data: []
+      };
     }
   },
 
@@ -388,6 +418,8 @@ export const bookingApi = {
   // User : Créer une réservation
   createBooking: async (bookingData) => {
     try {
+      console.log('Données de réservation reçues:', bookingData);
+      
       // Vérifier que l'ID de l'hôtel est valide
       if (!bookingData.hotelId) {
         console.error('Erreur createBooking: ID d\'hôtel non défini');
@@ -409,7 +441,20 @@ export const bookingApi = {
         };
       }
       
-      const response = await axiosInstance.post('/bookings', bookingData);
+      // Transformer les données pour correspondre à ce que le backend attend
+      const transformedData = {
+        // Renommer hotelId en hotel pour le backend
+        hotel: bookingData.hotelId,
+        checkIn: bookingData.checkIn,
+        checkOut: bookingData.checkOut,
+        numberOfGuests: bookingData.numberOfGuests,
+        totalPrice: bookingData.totalPrice,
+        specialRequests: bookingData.specialRequests
+      };
+      
+      console.log('Données transformées envoyées au backend:', transformedData);
+      
+      const response = await axiosInstance.post('/bookings', transformedData);
       return response;
     } catch (error) {
       console.error('Erreur createBooking:', error);

@@ -27,10 +27,26 @@ function Hotels() {
       });
 
       if (response.success) {
-        setHotels(response.data);
+        // Afficher la structure des données pour le débogage
+        console.log('Données des hôtels reçues:', response.data);
+        
+        // S'assurer que chaque hôtel a un ID valide
+        const hotelsWithValidIds = response.data.map(hotel => {
+          // Vérifier si l'ID existe sous différentes formes possibles
+          if (!hotel.id && !hotel._id) {
+            console.warn('Hôtel sans ID détecté:', hotel);
+          }
+          return hotel;
+        });
+        
+        setHotels(hotelsWithValidIds);
         setTotalPages(Math.ceil(response.total / 10));
+      } else {
+        console.error('Erreur lors du chargement des hôtels:', response.error);
+        setError(response.error || 'Erreur lors du chargement des hôtels');
       }
     } catch (error) {
+      console.error('Exception lors du chargement des hôtels:', error);
       setError(error.response?.data?.message || 'Erreur lors du chargement des hôtels');
     } finally {
       setLoading(false);
@@ -38,10 +54,19 @@ function Hotels() {
   };
 
   const handleBooking = (hotelId) => {
+    // Vérifier que l'ID de l'hôtel est valide
+    if (!hotelId) {
+      console.error('ID d\'hôtel non défini');
+      return;
+    }
+    
     if (!user) {
       navigate('/login', { state: { from: `/hotels/${hotelId}` } });
       return;
     }
+    
+    // Utiliser l'ID de l'hôtel pour la navigation
+    console.log('Navigation vers la page de réservation avec ID:', hotelId);
     navigate(`/bookings/create/${hotelId}`);
   };
 
@@ -101,7 +126,13 @@ function Hotels() {
               <div className="flex justify-between items-center">
                 <span className="text-lg font-bold text-blue-600">{hotel.price}€ / nuit</span>
                 <button
-                  onClick={() => handleBooking(hotel._id)}
+                  onClick={() => {
+                    // Vérifier et utiliser l'ID approprié (différentes conventions possibles)
+                    const hotelId = hotel._id || hotel.id || hotel.hotelId;
+                    console.log('Tentative de réservation pour l\'hôtel:', hotel);
+                    console.log('ID utilisé pour la réservation:', hotelId);
+                    handleBooking(hotelId);
+                  }}
                   className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
                 >
                   Réserver
