@@ -10,11 +10,11 @@ import { userApi, bookingApi } from '../../src/services/api';
 vi.mock('../../src/services/api', () => ({
   userApi: {
     getAllUsers: vi.fn(),
-    getUserBookings: vi.fn(),
     updateUser: vi.fn(),
     deleteUser: vi.fn()
   },
   bookingApi: {
+    getUserBookings: vi.fn(),
     getBookingDetails: vi.fn()
   }
 }));
@@ -37,7 +37,15 @@ describe('AdminUsers Component', () => {
   ];
 
   const mockBookings = [
-    { id: '1', hotelId: '1', userId: '3', status: 'confirmed', startDate: '2025-04-01', endDate: '2025-04-05' }
+    { 
+      id: '1', 
+      hotelId: '1', 
+      userId: '3', 
+      status: 'confirmed', 
+      checkIn: '2025-04-01', 
+      checkOut: '2025-04-05',
+      hotel: { name: 'Hôtel Test' }
+    }
   ];
 
   const mockAuthContext = {
@@ -50,7 +58,7 @@ describe('AdminUsers Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     userApi.getAllUsers.mockResolvedValue({ success: true, data: mockUsers });
-    userApi.getUserBookings.mockResolvedValue({ success: true, data: mockBookings });
+    bookingApi.getUserBookings.mockResolvedValue({ success: true, data: mockBookings });
     bookingApi.getBookingDetails.mockResolvedValue({ success: true, data: { hotel: { name: 'Test Hotel' } } });
   });
 
@@ -108,7 +116,7 @@ describe('AdminUsers Component', () => {
     fireEvent.click(screen.getByText('RegularUser'));
 
     await waitFor(() => {
-      expect(userApi.getUserBookings).toHaveBeenCalledWith('3');
+      expect(bookingApi.getUserBookings).toHaveBeenCalledWith('3');
     });
 
     // Vérifier que les détails de l'utilisateur sont affichés
@@ -135,15 +143,20 @@ describe('AdminUsers Component', () => {
     fireEvent.click(screen.getByText('RegularUser'));
 
     await waitFor(() => {
-      expect(userApi.getUserBookings).toHaveBeenCalled();
+      expect(bookingApi.getUserBookings).toHaveBeenCalled();
     });
 
     // Cliquer sur le bouton d'édition
     const editButtons = screen.getAllByText(/Modifier/i);
     fireEvent.click(editButtons[0]);
 
-    // Modifier le rôle
-    const roleSelect = screen.getByLabelText(/Rôle/i);
+    // Attendre que le formulaire d'édition soit affiché
+    await waitFor(() => {
+      expect(screen.getByText(/Nouveau mot de passe/i)).toBeInTheDocument();
+    });
+
+    // Modifier le rôle en utilisant le sélecteur
+    const roleSelect = screen.getByRole('combobox', { name: /Rôle/i });
     fireEvent.change(roleSelect, { target: { value: 'employee' } });
 
     // Enregistrer les modifications
@@ -176,16 +189,16 @@ describe('AdminUsers Component', () => {
     fireEvent.click(screen.getByText('RegularUser'));
 
     await waitFor(() => {
-      expect(userApi.getUserBookings).toHaveBeenCalled();
+      expect(bookingApi.getUserBookings).toHaveBeenCalled();
     });
 
     // Cliquer sur le bouton de suppression
     const deleteButton = screen.getByText(/Supprimer/i);
     fireEvent.click(deleteButton);
 
-    // Confirmer la suppression
-    const confirmButton = screen.getByText(/Confirmer la suppression/i);
-    fireEvent.click(confirmButton);
+    // Confirmer la suppression dans la boîte de dialogue
+    const confirmDeleteButton = screen.getByText('Supprimer', { selector: 'button.bg-red-500' });
+    fireEvent.click(confirmDeleteButton);
 
     await waitFor(() => {
       expect(userApi.deleteUser).toHaveBeenCalledWith('3');
