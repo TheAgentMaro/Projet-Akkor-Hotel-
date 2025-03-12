@@ -145,6 +145,8 @@ function AdminHotels() {
     
     setError(''); // Reset error
     setSuccessMessage(''); // Reset success message
+    setLoading(true); // Indiquer que le traitement commence
+    
     try {
       // Validation côté client plus stricte
       const name = formData.name?.trim();
@@ -162,7 +164,6 @@ function AdminHotels() {
         return;
       }
 
-      setLoading(true);
       const formDataToSend = new FormData();
       formDataToSend.append('name', name);
       formDataToSend.append('location', location);
@@ -177,30 +178,51 @@ function AdminHotels() {
         });
       }
 
-      setLoading(true);
+      // Appel API pour créer ou mettre à jour l'hôtel
+      let response;
+      if (editMode && editHotelId) {
+        response = await hotelApi.updateHotel(editHotelId, formDataToSend);
+      } else {
+        response = await hotelApi.createHotel(formDataToSend);
+      }
       
-      try {
-        let response;
-        if (editMode && editHotelId) {
-          response = await hotelApi.updateHotel(editHotelId, formDataToSend);
+      // Vérifier explicitement si la réponse indique un succès
+      // Détecter un succès soit par la propriété success, soit par la présence d'un ID d'hôtel valide
+      if ((response && response.success === true) || (response && response.id)) {
+        // Si la réponse contient directement les données de l'hôtel (avec un ID)
+        if (response.id) {
+          setSuccessMessage(editMode ? 'Hôtel modifié avec succès' : 'Hôtel créé avec succès');
+          // Afficher un badge de succès avec animation
+          const successElement = document.createElement('div');
+          successElement.className = 'success-notification';
+          successElement.textContent = '✔ Opération réussie';
+          document.body.appendChild(successElement);
+          setTimeout(() => document.body.removeChild(successElement), 3000);
         } else {
-          response = await hotelApi.createHotel(formDataToSend);
+          // Message standard si la réponse a la propriété success
+          setSuccessMessage(response.message || (editMode ? 'Hôtel modifié avec succès' : 'Hôtel créé avec succès'));
         }
         
-        // Vérifier explicitement si la réponse indique un succès
-        if (response && response.success === true) {
-          // Afficher un message de succès
-          setSuccessMessage(response.message || (editMode ? 'Hôtel modifié avec succès' : 'Hôtel créé avec succès'));
+        resetForm();
+        await loadHotels(); // Attendre que les hôtels soient rechargés
+      } else if (response?.error) {
+        // Erreur explicite retournée par l'API
+        setError(response.error);
+        console.error('Réponse API avec erreur:', response);
+      } else {
+        // Cas où la réponse n'a ni success ni error
+        console.warn('Réponse API inattendue:', response);
+        
+        // Vérifier si la réponse contient des données qui ressemblent à un hôtel
+        if (response && response.name && response.location) {
+          // C'est probablement un hôtel créé avec succès
+          setSuccessMessage('Hôtel créé avec succès');
           resetForm();
-          await loadHotels(); // Attendre que les hôtels soient rechargés
+          await loadHotels();
         } else {
-          // Afficher l'erreur retournée par l'API
-          setError(response?.error || 'Erreur lors de l\'opération');
-          console.error('Réponse API avec erreur:', response);
+          // Sinon, considérer comme une erreur
+          setError('Format de réponse inattendu. Veuillez vérifier si l\'opération a réussi.');
         }
-      } catch (err) {
-        console.error('Exception lors de l\'opération:', err);
-        setError('Une erreur inattendue est survenue');
       }
     } catch (error) {
       console.error('Erreur complète:', error);
@@ -209,7 +231,14 @@ function AdminHotels() {
       } else if (error.message) {
         setError(error.message);
       } else {
-        setError('Une erreur est survenue');
+        setError('Une erreur est survenue lors de l\'opération');
+      }
+      
+      // Recharger les hôtels même en cas d'erreur pour voir si l'hôtel a été créé malgré tout
+      try {
+        await loadHotels();
+      } catch (loadError) {
+        console.error('Erreur lors du rechargement des hôtels:', loadError);
       }
     } finally {
       setLoading(false);
