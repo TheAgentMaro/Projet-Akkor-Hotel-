@@ -259,7 +259,8 @@ export const hotelApi = {
       const response = await axiosInstance.post('/hotels', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      return response;
+      // Retourner directement les données de la réponse
+      return response.data;
     } catch (error) {
       console.error('Erreur createHotel:', error);
       throw error;
@@ -272,7 +273,8 @@ export const hotelApi = {
       const response = await axiosInstance.put(`/hotels/${id}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      return response;
+      // Retourner directement les données de la réponse
+      return response.data;
     } catch (error) {
       console.error('Erreur updateHotel:', error);
       throw error;
