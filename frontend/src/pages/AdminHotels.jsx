@@ -416,7 +416,21 @@ function AdminHotels() {
                       loading="lazy"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = 'https://via.placeholder.com/400x300?text=Image+non+disponible';
+                        // Utiliser une image locale au lieu d'un service externe
+                        e.target.src = '/assets/placeholder-hotel.jpg';
+                        // Si l'image locale ne fonctionne pas, utiliser un SVG inline
+                        e.target.onerror = () => {
+                          const parent = e.target.parentNode;
+                          if (parent) {
+                            parent.innerHTML = `
+                              <div class="w-full h-full flex items-center justify-center bg-gray-100">
+                                <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                              </div>
+                            `;
+                          }
+                        };
                       }}
                     />
                   ) : (

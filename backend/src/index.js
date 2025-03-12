@@ -40,7 +40,11 @@ app.use('/api/users', userRoutes);
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/bookings', bookingRoutes);
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Servir les fichiers statiques depuis le dossier uploads
+// Utiliser le chemin absolu pour éviter les problèmes de résolution
+const uploadsPath = path.join(__dirname, '..', 'uploads');
+console.log('Serving uploads from:', uploadsPath);
+app.use('/uploads', express.static(uploadsPath));
 
 // Route racine
 app.get('/', (req, res) => {
