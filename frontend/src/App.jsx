@@ -14,6 +14,7 @@ import Hotels from './pages/Hotels';
 import Profile from './pages/auth/Profile';
 import AdminUsers from './pages/AdminUsers';
 import AdminHotels from './pages/AdminHotels';
+import AdminBookings from './pages/AdminBookings';
 import EmployeeUsers from './pages/EmployeeUsers';
 import Bookings from './pages/Bookings';
 import CreateBooking from './pages/CreateBooking';
@@ -70,6 +71,14 @@ function App() {
               element={
                 <ProtectedRoute requireAdmin>
                   <AdminHotels />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/bookings"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminBookings />
                 </ProtectedRoute>
               }
             />

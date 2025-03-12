@@ -16,8 +16,8 @@ const Layout = ({ children }) => {
     { path: '/profile', label: 'Mon Profil', private: true },
     { path: '/admin/hotels', label: 'Gestion Hôtels', role: 'admin' },
     { path: '/admin/users', label: 'Gestion Utilisateurs', role: 'admin' },
-    { path: '/employee/users', label: 'Recherche Utilisateurs', role: ['admin', 'employee'] },
-    { path: '/employee/bookings', label: 'Gestion Réservations', role: ['admin', 'employee'] }
+    { path: '/admin/bookings', label: 'Gestion Réservations', role: ['admin', 'employee'] },
+    { path: '/employee/users', label: 'Recherche Utilisateurs', role: ['admin', 'employee'] }
   ];
 
   const renderNavItems = () => {
