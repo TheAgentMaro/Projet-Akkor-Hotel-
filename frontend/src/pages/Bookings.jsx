@@ -69,6 +69,20 @@ function Bookings() {
         return 'text-gray-600 bg-gray-100';
     }
   };
+  
+  // Fonction pour extraire et formater l'ID de réservation de manière sécurisée
+  const getBookingDisplayId = (booking) => {
+    if (!booking) return 'N/A';
+    
+    // Vérifier les différentes façons dont l'ID peut être stocké
+    const bookingId = booking._id || booking.id || booking.bookingId;
+    
+    if (!bookingId) return 'ID-???';
+    
+    // S'assurer que l'ID est une chaîne de caractères avant d'appeler slice
+    const idString = String(bookingId);
+    return idString.slice(-6); // Afficher les 6 derniers caractères de l'ID
+  };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -139,8 +153,12 @@ function Bookings() {
                   </span>
                 </div>
                 <div className="text-right">
-                  <p className="text-gray-600">Réservation #{booking._id.slice(-6)}</p>
-                  <p className="text-lg font-bold text-blue-600">{booking.totalPrice}€</p>
+                  <p className="text-gray-600">
+                    Réservation #{getBookingDisplayId(booking)}
+                  </p>
+                  <p className="text-lg font-bold text-blue-600">
+                    {booking.totalPrice ? `${booking.totalPrice}€` : 'Prix non disponible'}
+                  </p>
                 </div>
               </div>
 

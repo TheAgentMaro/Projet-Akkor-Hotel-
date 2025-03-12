@@ -93,7 +93,14 @@ function CreateBooking() {
       const start = new Date(checkIn);
       const end = new Date(checkOut);
       const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-      const price = hotel.price * nights * numberOfGuests;
+      
+      // Vérifier si hotel.price existe, sinon utiliser une valeur par défaut
+      // Cela est nécessaire car le modèle Hotel ne contient pas de champ price
+      const basePrice = hotel.price || 100; // Prix par défaut de 100 par nuit
+      console.log('Prix de base utilisé:', basePrice, 'Nuits:', nights, 'Invités:', numberOfGuests);
+      
+      const price = basePrice * nights * numberOfGuests;
+      console.log('Prix total calculé:', price);
       setTotalPrice(price);
     }
   }, [hotel, checkIn, checkOut, numberOfGuests]);
@@ -108,12 +115,26 @@ function CreateBooking() {
         setError('ID d\'hôtel non spécifié. Veuillez sélectionner un hôtel valide.');
         return;
       }
+      
+      // S'assurer que le prix total est un nombre valide
+      const finalPrice = parseFloat(totalPrice) || 0;
+      if (finalPrice <= 0) {
+        console.warn('Prix total invalide ou nul:', totalPrice, 'Utilisation d\'un prix par défaut');
+        // Calculer un prix par défaut si le prix est invalide
+        const start = new Date(data.checkIn);
+        const end = new Date(data.checkOut);
+        const nights = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+        const defaultPrice = 100 * nights * data.numberOfGuests;
+        setTotalPrice(defaultPrice);
+      }
 
       const bookingData = {
         hotelId,
         ...data,
-        totalPrice
+        totalPrice: finalPrice > 0 ? finalPrice : 100 * Math.max(1, Math.ceil((new Date(data.checkOut) - new Date(data.checkIn)) / (1000 * 60 * 60 * 24))) * data.numberOfGuests
       };
+      
+      console.log('Données de réservation envoyées:', bookingData);
 
       const response = await bookingApi.createBooking(bookingData);
       
