@@ -1,8 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 require('dotenv').config();
-
-// Importer le modèle User existant
 const User = require('../src/models/User');
 
 async function createAdminUser() {
@@ -14,15 +11,15 @@ async function createAdminUser() {
     const existingAdmin = await User.findOne({ email: 'admin@akkor-hotel.com' });
     if (existingAdmin) {
       console.log('Admin user already exists');
+      await mongoose.disconnect();
       return;
     }
 
     // Créer l'utilisateur admin
-    const hashedPassword = await bcrypt.hash('Admin123!', 10);
     const adminUser = new User({
       email: 'admin@akkor-hotel.com',
       pseudo: 'AdminAkkor',
-      password: hashedPassword,
+      password: 'Admin123!',  // Le modèle User va hasher automatiquement le mot de passe
       role: 'admin'
     });
 
