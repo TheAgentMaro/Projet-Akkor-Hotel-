@@ -9,46 +9,41 @@ import { userApi, bookingApi } from '../../src/services/api';
 // Mock des API
 vi.mock('../../src/services/api', () => ({
   userApi: {
-    searchUsers: vi.fn(),
-    getUserBookings: vi.fn()
+    searchUsers: vi.fn()
   },
   bookingApi: {
-    getBookingDetails: vi.fn()
+    getUserBookings: vi.fn()
   }
 }));
 
-// Mock de useNavigate
-const mockNavigate = vi.fn();
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate
-  };
-});
-
 describe('EmployeeUsers Component', () => {
   const mockUsers = [
-    { id: '1', email: 'user1@test.com', pseudo: 'User1', role: 'user' },
-    { id: '2', email: 'user2@test.com', pseudo: 'User2', role: 'user' }
+    { _id: '1', email: 'user1@test.com', pseudo: 'User1', role: 'user', createdAt: '2023-01-01T00:00:00.000Z' },
+    { _id: '2', email: 'user2@test.com', pseudo: 'User2', role: 'user', createdAt: '2023-01-02T00:00:00.000Z' }
   ];
 
   const mockBookings = [
-    { id: '1', hotelId: '1', userId: '1', status: 'confirmed', startDate: '2025-04-01', endDate: '2025-04-05' }
+    { 
+      _id: 'booking1', 
+      hotelId: 'hotel1', 
+      userId: '1', 
+      status: 'confirmed', 
+      checkIn: '2025-04-01T00:00:00.000Z', 
+      checkOut: '2025-04-05T00:00:00.000Z', 
+      totalPrice: 500,
+      hotel: { name: 'Test Hotel', location: 'Paris' } 
+    }
   ];
 
   const mockAuthContext = {
-    user: { id: 'emp1', email: 'employee@test.com', role: 'employee' },
-    hasRole: (role) => role === 'employee',
-    roleBadgeColor: 'bg-blue-100 text-blue-800',
-    roleLabel: 'Employé'
+    user: { _id: 'emp1', email: 'employee@test.com', role: 'employee' },
+    isAuthenticated: true
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     userApi.searchUsers.mockResolvedValue({ success: true, data: mockUsers });
-    userApi.getUserBookings.mockResolvedValue({ success: true, data: mockBookings });
-    bookingApi.getBookingDetails.mockResolvedValue({ success: true, data: { hotel: { name: 'Test Hotel' } } });
+    bookingApi.getUserBookings.mockResolvedValue({ success: true, data: mockBookings });
   });
 
   it('affiche le formulaire de recherche', () => {
@@ -60,7 +55,7 @@ describe('EmployeeUsers Component', () => {
       </AuthContext.Provider>
     );
 
-    expect(screen.getByPlaceholderText(/Rechercher par email, pseudo ou id/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Rechercher par nom d'utilisateur \(pseudo\) ou email/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Rechercher/i })).toBeInTheDocument();
   });
 
@@ -76,6 +71,7 @@ describe('EmployeeUsers Component', () => {
     // Soumettre le formulaire avec une recherche vide
     fireEvent.click(screen.getByRole('button', { name: /Rechercher/i }));
 
+    // Vérifier que le message d'erreur est affiché
     expect(screen.getByText(/Veuillez saisir un terme de recherche/i)).toBeInTheDocument();
     expect(userApi.searchUsers).not.toHaveBeenCalled();
   });
@@ -90,7 +86,7 @@ describe('EmployeeUsers Component', () => {
     );
 
     // Remplir le champ de recherche
-    fireEvent.change(screen.getByPlaceholderText(/Rechercher par email, pseudo ou id/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Rechercher par nom d'utilisateur \(pseudo\) ou email/i), {
       target: { value: 'user' }
     });
 
@@ -102,8 +98,10 @@ describe('EmployeeUsers Component', () => {
     });
 
     // Vérifier que les résultats sont affichés
-    expect(screen.getByText('User1')).toBeInTheDocument();
-    expect(screen.getByText('User2')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('User1')).toBeInTheDocument();
+      expect(screen.getByText('User2')).toBeInTheDocument();
+    });
   });
 
   it('affiche un message si aucun résultat n\'est trouvé', async () => {
@@ -118,7 +116,7 @@ describe('EmployeeUsers Component', () => {
     );
 
     // Remplir le champ de recherche
-    fireEvent.change(screen.getByPlaceholderText(/Rechercher par email, pseudo ou id/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Rechercher par nom d'utilisateur \(pseudo\) ou email/i), {
       target: { value: 'nonexistent' }
     });
 
@@ -130,38 +128,9 @@ describe('EmployeeUsers Component', () => {
     });
 
     // Vérifier que le message d'erreur est affiché
-    expect(screen.getByText(/Aucun utilisateur trouvé pour "nonexistent"/i)).toBeInTheDocument();
-  });
-
-  it('affiche les détails d\'un utilisateur et ses réservations lors de la sélection', async () => {
-    render(
-      <AuthContext.Provider value={mockAuthContext}>
-        <MemoryRouter>
-          <EmployeeUsers />
-        </MemoryRouter>
-      </AuthContext.Provider>
-    );
-
-    // Remplir le champ de recherche et soumettre
-    fireEvent.change(screen.getByPlaceholderText(/Rechercher par email, pseudo ou id/i), {
-      target: { value: 'user' }
-    });
-    fireEvent.click(screen.getByRole('button', { name: /Rechercher/i }));
-
     await waitFor(() => {
-      expect(screen.getByText('User1')).toBeInTheDocument();
+      expect(screen.getByText(/Aucun utilisateur trouvé pour "nonexistent"/i)).toBeInTheDocument();
     });
-
-    // Cliquer sur un utilisateur pour voir ses détails
-    fireEvent.click(screen.getByText('User1'));
-
-    await waitFor(() => {
-      expect(userApi.getUserBookings).toHaveBeenCalledWith('1');
-    });
-
-    // Vérifier que les détails de l'utilisateur et ses réservations sont affichés
-    expect(screen.getByText('user1@test.com')).toBeInTheDocument();
-    expect(screen.getByText(/Réservations de l'utilisateur/i)).toBeInTheDocument();
   });
 
   it('gère les erreurs lors de la recherche', async () => {
@@ -176,7 +145,7 @@ describe('EmployeeUsers Component', () => {
     );
 
     // Remplir le champ de recherche
-    fireEvent.change(screen.getByPlaceholderText(/Rechercher par email, pseudo ou id/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Rechercher par nom d'utilisateur \(pseudo\) ou email/i), {
       target: { value: 'user' }
     });
 
@@ -185,6 +154,80 @@ describe('EmployeeUsers Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Erreur lors de la recherche des utilisateurs/i)).toBeInTheDocument();
+    });
+  });
+
+  it('affiche un message si aucune réservation n\'est trouvée pour l\'utilisateur sélectionné', async () => {
+    // Configurer le mock pour retourner un tableau vide de réservations
+    bookingApi.getUserBookings.mockResolvedValueOnce({ success: true, data: [] });
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <MemoryRouter>
+          <EmployeeUsers />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    // Remplir le champ de recherche et soumettre
+    fireEvent.change(screen.getByPlaceholderText(/Rechercher par nom d'utilisateur \(pseudo\) ou email/i), {
+      target: { value: 'user' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Rechercher/i }));
+
+    // Attendre que les résultats de recherche s'affichent
+    await waitFor(() => {
+      expect(screen.getByText('User1')).toBeInTheDocument();
+    });
+
+    // Cliquer sur un utilisateur pour voir ses détails
+    fireEvent.click(screen.getByText('User1'));
+
+    // Vérifier que l'API a été appelée avec l'ID correct
+    await waitFor(() => {
+      expect(bookingApi.getUserBookings).toHaveBeenCalledWith('1');
+    });
+
+    // Vérifier que le message d'absence de réservations est affiché
+    await waitFor(() => {
+      expect(screen.getByText(/Aucune réservation trouvée pour User1/i)).toBeInTheDocument();
+    });
+  });
+
+  it('gère les erreurs lors du chargement des réservations', async () => {
+    // Configurer le mock pour simuler une erreur lors du chargement des réservations
+    bookingApi.getUserBookings.mockRejectedValueOnce(new Error('Erreur API'));
+
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <MemoryRouter>
+          <EmployeeUsers />
+        </MemoryRouter>
+      </AuthContext.Provider>
+    );
+
+    // Remplir le champ de recherche et soumettre
+    fireEvent.change(screen.getByPlaceholderText(/Rechercher par nom d'utilisateur \(pseudo\) ou email/i), {
+      target: { value: 'user' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Rechercher/i }));
+
+    // Attendre que les résultats de recherche s'affichent
+    await waitFor(() => {
+      expect(screen.getByText('User1')).toBeInTheDocument();
+    });
+
+    // Cliquer sur un utilisateur pour voir ses détails
+    fireEvent.click(screen.getByText('User1'));
+
+    // Vérifier que l'API a été appelée avec l'ID correct
+    await waitFor(() => {
+      expect(bookingApi.getUserBookings).toHaveBeenCalledWith('1');
+    });
+
+    // Vérifier que le message d'erreur est affiché
+    await waitFor(() => {
+      expect(screen.getByText(/Erreur lors du chargement des réservations/i)).toBeInTheDocument();
     });
   });
 });

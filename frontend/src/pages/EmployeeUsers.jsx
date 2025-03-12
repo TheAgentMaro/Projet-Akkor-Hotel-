@@ -117,7 +117,14 @@ function EmployeeUsers() {
           </span>
         </div>
       </div>
-
+      
+      {/* Message d'erreur */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6" data-testid="error-text">
+          <p className="text-red-700">{error}</p>
+        </div>
+      )}
+      
       <form onSubmit={handleSearch} className="mb-8">
         <div className="flex flex-col gap-2">
           <div className="flex gap-4">
@@ -170,17 +177,6 @@ function EmployeeUsers() {
         </div>
       </form>
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-md shadow-sm">
-          <div className="flex items-center">
-            <svg className="h-6 w-6 text-red-500 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            <p>{error}</p>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Liste des utilisateurs */}
         <div>
@@ -190,9 +186,10 @@ function EmployeeUsers() {
                 <h2 className="text-lg font-semibold text-gray-800">Résultats de la recherche</h2>
               </div>
               <div className="divide-y divide-gray-200">
-                {searchResults.map((userResult) => (
+                {searchResults.map((userResult, index) => (
                   <div
-                    key={userResult._id}
+                    key={index}
+                    data-testid={`user-result-${userResult._id}`}
                     className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150 ${
                       selectedUser?._id === userResult._id ? 'bg-blue-50' : ''
                     }`}
@@ -263,8 +260,8 @@ function EmployeeUsers() {
                   </div>
                 ) : userBookings.length > 0 ? (
                   <div className="space-y-4">
-                    {userBookings.map((booking) => (
-                      <div key={booking.id} className="border rounded-lg p-4">
+                    {userBookings.map((booking, index) => (
+                      <div key={index} className="border rounded-lg p-4">
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h5 className="font-medium">{booking.hotel?.name}</h5>
