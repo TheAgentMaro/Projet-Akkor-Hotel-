@@ -56,21 +56,34 @@ function Login() {
   
       const response = await authApi.login(data.email, data.password);
       
-      if (response.success && response.data && response.token) {
+      // Vérifier la structure de la réponse
+      if (response.data && response.token) {
         await login(response.data, response.token);
         setSuccessMessage('Connexion réussie !');
         reset();
-        // Redirection immédiate
-        navigate(from, { replace: true });
+        // Redirection immédiate vers la page appropriée selon le rôle
+        const role = response.data.role;
+        let redirectPath = from;
+        
+        // Redirection basée sur le rôle
+        if (role === 'admin') {
+          redirectPath = '/admin/users';
+        } else if (role === 'employee') {
+          redirectPath = '/employee/users';
+        } else {
+          redirectPath = '/';
+        }
+        
+        navigate(redirectPath, { replace: true });
       } else {
-        throw new Error('Structure de réponse invalide');
+        throw new Error('Erreur lors de la connexion');
       }
     } catch (error) {
       console.error('Erreur de connexion:', error);
       setErrorMessage(
-        error.response?.data?.message || 
+        error.error || 
         error.message || 
-        'Identifiants invalides'
+        'Identifiants invalides. Veuillez réessayer.'
       );
     } finally {
       setIsLoading(false);
@@ -189,12 +202,12 @@ function Login() {
                       r="10"
                       stroke="currentColor"
                       strokeWidth="4"
-                    ></circle>
+                    />
                     <path
                       className="opacity-75"
                       fill="currentColor"
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
+                    />
                   </svg>
                   Connexion en cours...
                 </span>

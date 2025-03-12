@@ -32,15 +32,18 @@ axiosInstance.interceptors.response.use(
   (response) => {
     // Standardiser la structure de la réponse
     const standardResponse = {
-      success: true,
-      data: response.data.data,
+      success: response.data.success ?? true,
+      data: response.data.data ?? response.data,
       token: response.data.token,
       message: response.data.message
     };
 
-    // Si la réponse n'a pas de data.data mais a un data, utiliser data directement
-    if (!response.data.data && response.data) {
-      standardResponse.data = response.data;
+    // Si le token est présent, le configurer dans Axios
+    if (standardResponse.token) {
+      const tokenWithBearer = standardResponse.token.startsWith('Bearer ')
+        ? standardResponse.token
+        : `Bearer ${standardResponse.token}`;
+      axiosInstance.defaults.headers.common['Authorization'] = tokenWithBearer;
     }
 
     return standardResponse;

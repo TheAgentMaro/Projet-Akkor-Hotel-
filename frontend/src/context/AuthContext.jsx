@@ -7,6 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -16,18 +17,23 @@ export const AuthProvider = ({ children }) => {
           const response = await userApi.getProfile();
           if (response.success && response.data) {
             setUser(response.data);
+            setIsAuthenticated(true);
             localStorage.setItem('user', JSON.stringify(response.data));
           } else {
             // Si la réponse n'est pas valide, nettoyer le stockage
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            setIsAuthenticated(false);
           }
         } catch (error) {
           console.error('Erreur lors de la récupération du profil:', error);
           setError(error.message);
           localStorage.removeItem('token');
           localStorage.removeItem('user');
+          setIsAuthenticated(false);
         }
+      } else {
+        setIsAuthenticated(false);
       }
       setLoading(false);
     };
@@ -42,10 +48,12 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', tokenWithBearer);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
+      setIsAuthenticated(true);
       setError(null);
     } catch (error) {
       console.error('Erreur lors de la connexion:', error);
       setError('Erreur lors de la connexion');
+      setIsAuthenticated(false);
       throw error;
     }
   };
@@ -54,6 +62,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    setIsAuthenticated(false);
     setError(null);
   };
 
@@ -72,7 +81,7 @@ export const AuthProvider = ({ children }) => {
       logout, 
       loading,
       error,
-      isAuthenticated: !!user
+      isAuthenticated
     }}>
       {children}
     </AuthContext.Provider>
