@@ -14,20 +14,35 @@ function EmployeeUsers() {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
+    
+    // Vérifier si la requête est vide
+    if (!searchQuery.trim()) {
+      setError('Veuillez saisir un terme de recherche');
+      return;
+    }
 
     try {
       setLoading(true);
       setError('');
       setSelectedUser(null);
       setUserBookings([]);
+      setSearchResults([]);
+      
       const response = await userApi.searchUsers(searchQuery);
+      
       if (response.success) {
         setSearchResults(response.data);
+        
+        // Afficher un message si aucun résultat n'est trouvé
+        if (response.data.length === 0) {
+          setError(`Aucun utilisateur trouvé pour "${searchQuery}". Essayez un autre terme.`);
+        }
+      } else {
+        setError(response.error || 'Erreur lors de la recherche des utilisateurs');
       }
     } catch (err) {
-      setError('Erreur lors de la recherche des utilisateurs');
       console.error('Erreur recherche:', err);
+      setError('Erreur lors de la recherche des utilisateurs');
     } finally {
       setLoading(false);
     }
@@ -37,12 +52,32 @@ function EmployeeUsers() {
     try {
       setLoadingBookings(true);
       setSelectedUser(selectedUser);
-      const response = await bookingApi.getUserBookings(selectedUser.id);
+      setError('');
+      
+      // Vérifier que l'ID utilisateur est valide
+      if (!selectedUser._id) {
+        setError('ID utilisateur invalide');
+        setUserBookings([]);
+        return;
+      }
+      
+      const response = await bookingApi.getUserBookings(selectedUser._id);
+      
       if (response.success) {
         setUserBookings(response.data);
+        
+        // Message si aucune réservation n'est trouvée
+        if (response.data.length === 0) {
+          setError(`Aucune réservation trouvée pour ${selectedUser.pseudo}`);
+        }
+      } else {
+        setError(response.error || 'Erreur lors du chargement des réservations');
+        setUserBookings([]);
       }
     } catch (err) {
       console.error('Erreur chargement réservations:', err);
+      setError('Erreur lors du chargement des réservations');
+      setUserBookings([]);
     } finally {
       setLoadingBookings(false);
     }
@@ -84,21 +119,41 @@ function EmployeeUsers() {
       </div>
 
       <form onSubmit={handleSearch} className="mb-8">
-        <div className="flex gap-4">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher par email, pseudo ou ID..."
-            className="flex-1 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className={`px-6 py-2 rounded-lg text-white transition-colors duration-200 ${
-              loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-4">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher par nom d'utilisateur (pseudo) ou email..."
+                className="w-full pl-10 border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+              />
+              {searchQuery && (
+                <button 
+                  type="button" 
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`px-6 py-2 rounded-lg text-white transition-colors duration-200 flex items-center ${
+                loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
             {loading ? (
               <div className="flex items-center">
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -111,16 +166,17 @@ function EmployeeUsers() {
               'Rechercher'
             )}
           </button>
+          </div>
         </div>
       </form>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-md shadow-sm">
           <div className="flex items-center">
-            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="h-6 w-6 text-red-500 mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            {error}
+            <p>{error}</p>
           </div>
         </div>
       )}
@@ -136,9 +192,9 @@ function EmployeeUsers() {
               <div className="divide-y divide-gray-200">
                 {searchResults.map((userResult) => (
                   <div
-                    key={userResult.id}
+                    key={userResult._id}
                     className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150 ${
-                      selectedUser?.id === userResult.id ? 'bg-blue-50' : ''
+                      selectedUser?._id === userResult._id ? 'bg-blue-50' : ''
                     }`}
                     onClick={() => handleUserSelect(userResult)}
                   >
