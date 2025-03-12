@@ -1,102 +1,168 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { bookingApi } from '../services/api';
+import AuthContext from '../context/AuthContext';
 
 function Bookings() {
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-
-  const navigate = useNavigate();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    axios
-      .get(`${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/bookings/me`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      })
-      .then((response) => {
-        if (response.data.success) {
-          setBookings(response.data.data);
-        } else {
-          setError('Erreur lors du chargement des réservations');
-        }
-      })
-      .catch(() => {
-        setError('Erreur lors du chargement des réservations');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    loadBookings();
   }, []);
 
-  const handleCancel = async (bookingId) => {
+  const loadBookings = async () => {
     try {
-      const confirmCancel = window.confirm('Voulez-vous annuler cette réservation ?');
-      if (!confirmCancel) return;
-
-      await bookingApi.cancelBooking(bookingId);
-      setBookings(bookings.map((b) =>
-        b.id === bookingId ? { ...b, status: 'cancelled' } : b
-      ));
-    } catch (err) {
-      setError('Échec de l’annulation');
+      setLoading(true);
+      const response = await bookingApi.getAllBookings();
+      if (response.success) {
+        setBookings(response.data);
+      }
+    } catch (error) {
+      setError(error.response?.data?.message || 'Erreur lors du chargement des réservations');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (bookingId) => {
-    navigate(`/create-booking?edit=${bookingId}`);
+  const handleCancel = async (bookingId) => {
+    try {
+      if (!isDeleting) {
+        setIsDeleting(true);
+        return;
+      }
+
+      const response = await bookingApi.deleteBooking(bookingId);
+      if (response.success) {
+        setBookings(bookings.filter(booking => booking._id !== bookingId));
+        setIsDeleting(false);
+      }
+    } catch (error) {
+      setError(error.response?.data?.message || 'Erreur lors de l\'annulation');
+      setIsDeleting(false);
+    }
   };
 
-  if (loading) return <div className="text-gray-700">Chargement...</div>;
-  if (error) return <div className="text-red-600">{error}</div>;
+  const getStatusColor = (status) => {
+    switch (status.toLowerCase()) {
+      case 'confirmed':
+        return 'text-green-600 bg-green-100';
+      case 'pending':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'cancelled':
+        return 'text-red-600 bg-red-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8 bg-red-50 rounded-lg">
+          <p className="text-red-600 font-semibold">{error}</p>
+          <button
+            onClick={loadBookings}
+            className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-4">Mes Réservations</h1>
-      <button
-        onClick={() => navigate('/create-booking')}
-        className="bg-green-500 text-white p-2 rounded mb-4 hover:bg-green-600"
-      >
-        Nouvelle réservation
-      </button>
-      <ul className="space-y-4">
-        {bookings.map((booking) => (
-          <li key={booking.id} className="bg-white p-4 rounded shadow">
-            <p className="text-gray-700">
-              <span className="font-semibold">Hôtel :</span> {booking.hotel?.name}
-            </p>
-            <p className="text-gray-700">
-              <span className="font-semibold">Date d'arrivée :</span>{' '}
-              {new Date(booking.checkIn).toLocaleDateString()}
-            </p>
-            <p className="text-gray-700">
-              <span className="font-semibold">Date de départ :</span>{' '}
-              {new Date(booking.checkOut).toLocaleDateString()}
-            </p>
-            <p className="text-gray-700">
-              <span className="font-semibold">Statut :</span> {booking.status}
-            </p>
-            <div className="mt-2 flex space-x-2">
-              <button
-                onClick={() => handleEdit(booking.id)}
-                className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-              >
-                Modifier
-              </button>
-              <button
-                onClick={() => handleCancel(booking.id)}
-                disabled={booking.status === 'cancelled'}
-                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50"
-              >
-                Annuler
-              </button>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">
+          {user?.role === 'admin' ? 'Toutes les Réservations' : 'Mes Réservations'}
+        </h1>
+        <button
+          onClick={() => navigate('/hotels')}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          Nouvelle réservation
+        </button>
+      </div>
+
+      {bookings.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <p className="text-gray-600 text-lg">
+            Aucune réservation trouvée.{' '}
+            <span className="text-blue-500 cursor-pointer" onClick={() => navigate('/hotels')}>
+              Réserver maintenant
+            </span>
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {bookings.map((booking) => (
+            <div key={booking._id} className="bg-white rounded-lg shadow-lg p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-800">
+                    {booking.hotel?.name}
+                  </h3>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(booking.status)}`}>
+                    {booking.status}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="text-gray-600">Réservation #{booking._id.slice(-6)}</p>
+                  <p className="text-lg font-bold text-blue-600">{booking.totalPrice}€</p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-gray-600">Check-in</p>
+                  <p className="font-semibold">{formatDate(booking.checkIn)}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Check-out</p>
+                  <p className="font-semibold">{formatDate(booking.checkOut)}</p>
+                </div>
+              </div>
+
+              {booking.status !== 'cancelled' && (
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => handleCancel(booking._id)}
+                    className={`px-4 py-2 rounded ${
+                      isDeleting
+                        ? 'bg-red-600 text-white'
+                        : 'bg-red-500 text-white hover:bg-red-600'
+                    }`}
+                  >
+                    {isDeleting ? 'Confirmer l\'annulation' : 'Annuler'}
+                  </button>
+                </div>
+              )}
             </div>
-          </li>
-        ))}
-      </ul>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
