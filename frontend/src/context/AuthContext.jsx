@@ -9,11 +9,18 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Vérifier l'authentification au chargement
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('token');
-      if (token) {
+      const storedUser = localStorage.getItem('user');
+
+      if (token && storedUser) {
         try {
+          // Configurer le token dans Axios
+          const tokenWithBearer = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+          
+          // Vérifier si l'utilisateur est toujours valide
           const response = await userApi.getProfile();
           if (response.success && response.data) {
             setUser(response.data);
@@ -21,19 +28,15 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('user', JSON.stringify(response.data));
           } else {
             // Si la réponse n'est pas valide, nettoyer le stockage
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setIsAuthenticated(false);
+            handleLogout();
           }
         } catch (error) {
           console.error('Erreur lors de la récupération du profil:', error);
           setError(error.message);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setIsAuthenticated(false);
+          handleLogout();
         }
       } else {
-        setIsAuthenticated(false);
+        handleLogout();
       }
       setLoading(false);
     };
@@ -41,29 +44,37 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsAuthenticated(false);
+    setError(null);
+  };
+
   const login = async (userData, token) => {
     try {
       // Ajouter le préfixe Bearer si nécessaire
       const tokenWithBearer = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      
+      // Stocker les informations d'authentification
       localStorage.setItem('token', tokenWithBearer);
       localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Mettre à jour l'état
       setUser(userData);
       setIsAuthenticated(true);
       setError(null);
     } catch (error) {
       console.error('Erreur lors de la connexion:', error);
       setError('Erreur lors de la connexion');
-      setIsAuthenticated(false);
+      handleLogout();
       throw error;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    setIsAuthenticated(false);
-    setError(null);
+    handleLogout();
   };
 
   if (loading) {

@@ -17,49 +17,30 @@ axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Ne pas ajouter "Bearer" si c'est déjà présent
       config.headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Intercepteur pour les réponses
 axiosInstance.interceptors.response.use(
-  (response) => {
-    // Standardiser la structure de la réponse
-    const standardResponse = {
-      success: response.data.success ?? true,
-      data: response.data.data ?? response.data,
-      token: response.data.token,
-      message: response.data.message
-    };
-
-    // Si le token est présent, le configurer dans Axios
-    if (standardResponse.token) {
-      const tokenWithBearer = standardResponse.token.startsWith('Bearer ')
-        ? standardResponse.token
-        : `Bearer ${standardResponse.token}`;
-      axiosInstance.defaults.headers.common['Authorization'] = tokenWithBearer;
-    }
-
-    return standardResponse;
-  },
+  (response) => ({
+    success: true,
+    data: response.data.data || response.data,
+    token: response.data.token,
+    message: response.data.message
+  }),
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
+      window.location.href = '/login';
     }
     return Promise.reject({
       success: false,
-      error: error.response?.data?.message || error.message,
-      status: error.response?.status
+      error: error.response?.data?.message || error.message
     });
   }
 );

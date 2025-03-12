@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bookingController = require('../controllers/bookingController');
-const { protect, admin } = require('../middleware/auth');
+const { protect, admin, adminOrEmployee } = require('../middleware/auth');
 const validator = require('../middleware/validator');
 
 // Toutes les routes nécessitent d'être authentifié
@@ -140,15 +140,13 @@ router.put('/:id', validator.validateBookingUpdate, bookingController.updateBook
  */
 router.put('/:id/cancel', bookingController.cancelBooking);
 
-// Routes admin uniquement
-router.use(admin);
-
+// Routes accessibles aux employés et admins
 /**
  * @swagger
  * /api/bookings:
  *   get:
  *     tags: [Bookings]
- *     summary: Obtenir toutes les réservations (admin uniquement)
+ *     summary: Obtenir toutes les réservations (admin et employee)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -171,14 +169,14 @@ router.use(admin);
  *       403:
  *         description: Non autorisé
  */
-router.get('/', bookingController.getAllBookings);
+router.get('/', adminOrEmployee, bookingController.getAllBookings);
 
 /**
  * @swagger
  * /api/bookings/{id}:
  *   delete:
  *     tags: [Bookings]
- *     summary: Supprimer une réservation (admin uniquement)
+ *     summary: Supprimer une réservation (admin  uniquement)
  *     security:
  *       - BearerAuth: []
  *     parameters:
@@ -197,6 +195,10 @@ router.get('/', bookingController.getAllBookings);
  *       404:
  *         description: Réservation non trouvée
  */
-router.delete('/:id', bookingController.deleteBooking);
+router.delete('/:id', admin, bookingController.deleteBooking);
+
+
+
+
 
 module.exports = router;
