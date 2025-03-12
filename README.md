@@ -1,89 +1,112 @@
-# Akkor Hotel Platform
+# Projet Akkor Hotel
 
-Akkor Hotel est une plateforme de réservation d'hôtels en ligne offrant une expérience utilisateur fluide et optimisée pour le desktop et le mobile. Ce projet comprend un backend sécurisé et un frontend moderne.
+## Table des matières
+1. [Introduction](#introduction)
+2. [Fonctionnalités](#fonctionnalités)
+3. [Technologies utilisées](#technologies-utilisées)
+4. [Installation](#installation)
+5. [Configuration](#configuration)
+6. [Utilisation](#utilisation)
+7. [Tests](#tests)
+8. [Contribution](#contribution)
+9. [Licence](#licence)
 
-## Stack Technique
+## Introduction
+Le projet Akkor Hotel est une application web moderne pour la gestion des hôtels et des réservations. Il offre une interface intuitive pour les administrateurs, les employés et les utilisateurs finaux, avec des fonctionnalités adaptées à chaque rôle.
 
+## Fonctionnalités
+### Pour les administrateurs
+- Gestion complète des utilisateurs (CRUD)
+- Modification des rôles des utilisateurs
+- Gestion des hôtels et des réservations
+
+### Pour les employés
+- Recherche et consultation des utilisateurs
+- Accès aux informations des réservations
+- Gestion limitée des hôtels
+
+### Pour les utilisateurs
+- Gestion de leur profil (mise à jour, suppression)
+- Gestion de leurs réservations
+- Consultation des hôtels
+
+## Technologies utilisées
 ### Backend
-- Node.js avec Express.js
-- MongoDB avec Mongoose
-- JWT Authentication avec Passport.js
-- Validation avec Joi
-- Tests avec Jest
+- Node.js
+- Express.js
+- MongoDB
+- JWT pour l'authentification
+- Yup pour la validation des formulaires
 
 ### Frontend
-- React.js avec Vite
-- Material UI + Tailwind CSS
+- React.js
 - React Router pour la navigation
-- React Hook Form + Yup pour la validation
-- Tests avec Vitest et React Testing Library
-
-## Structure du Projet
-
-```
-akkor-hotel/
-├── backend/                # API Node.js
-│   ├── src/
-│   │   ├── models/        # Modèles Mongoose
-│   │   ├── routes/        # Routes API
-│   │   ├── controllers/   # Logique métier
-│   │   ├── middleware/    # Middleware personnalisé
-│   │   └── config/       # Configuration
-│   └── tests/            # Tests unitaires et d'intégration
-├── frontend/             # Application React
-│   ├── src/
-│   │   ├── components/   # Composants React
-│   │   ├── pages/       # Pages de l'application
-│   │   ├── services/    # Services API
-│   │   └── utils/       # Utilitaires
-│   └── tests/           # Tests frontend
-└── .github/             # Configuration GitHub Actions
-```
+- Context API pour la gestion de l'état
+- Axios pour les requêtes HTTP
+- Tailwind CSS pour le style
 
 ## Installation
-
 ### Prérequis
-- Node.js (v18 ou supérieur)
+- Node.js (v14 ou supérieur)
 - MongoDB
-- Git
 
-### Backend
-```bash
-cd backend
-npm install
-cp .env.example .env  # Configurer les variables d'environnement
-npm run dev
-```
+### Étapes
+1. Cloner le dépôt :
+   ```bash
+   git clone https://github.com/votre-utilisateur/projet-akkor-hotel.git
+   ```
+2. Installer les dépendances du backend :
+   ```bash
+   cd backend
+   npm install
+   ```
+3. Installer les dépendances du frontend :
+   ```bash
+   cd ../frontend
+   npm install
+   ```
 
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
+## Configuration
+1. Créer un fichier `.env` dans le dossier `backend` avec les variables suivantes :
+   ```env
+   PORT=5000
+   MONGO_URI=mongodb://localhost:27017/akkor-hotel
+   JWT_SECRET=votre_secret_jwt
+   ```
+2. Créer un fichier `.env` dans le dossier `frontend` avec les variables suivantes :
+   ```env
+   REACT_APP_API_URL=http://localhost:5000
+   ```
+
+## Utilisation
+1. Démarrer le serveur backend :
+   ```bash
+   cd backend
+   npm start
+   ```
+2. Démarrer le serveur frontend :
+   ```bash
+   cd frontend
+   npm start
+   ```
+3. Accéder à l'application via `http://localhost:3000`.
 
 ## Tests
-
-### Backend
+Pour exécuter les tests :
 ```bash
 cd backend
 npm test
-```
 
-### Frontend
-```bash
-cd frontend
+cd ../frontend
 npm test
 ```
 
-## CI/CD
+## Contribution
+1. Forker le projet
+2. Créer une branche (`git checkout -b feature/AmazingFeature`)
+3. Committer vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. Pousser la branche (`git push origin feature/AmazingFeature`)
+5. Ouvrir une Pull Request
 
-Le projet utilise GitHub Actions pour :
-- Exécuter les tests
-- Vérifier le linting
-- Construire l'application
-- Déploiement automatique (à configurer)
-
-## Documentation API
-
-La documentation Swagger sera disponible sur `/api-docs` une fois le backend démarré.
+## Licence
+Distribué sous la licence MIT. Voir `LICENSE` pour plus d'informations.

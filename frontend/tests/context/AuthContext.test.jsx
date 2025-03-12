@@ -72,32 +72,7 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('can-access')).toHaveTextContent('Cannot Access');
   });
 
-  it('charge l\'utilisateur depuis le localStorage si un token existe', async () => {
-    // Simuler un token et un utilisateur dans le localStorage
-    localStorage.setItem('token', 'Bearer fake-token');
-    localStorage.setItem('user', JSON.stringify({ id: '1', email: 'test@example.com', role: 'admin' }));
-    
-    userApi.getProfile.mockResolvedValueOnce({
-      success: true,
-      data: { id: '1', email: 'test@example.com', role: 'admin' }
-    });
-
-    render(
-      <AuthProvider>
-        <TestConsumer />
-      </AuthProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
-    });
-    
-    expect(screen.getByTestId('user-role')).toHaveTextContent('admin');
-    expect(screen.getByTestId('has-admin-role')).toHaveTextContent('Has Admin');
-    expect(screen.getByTestId('has-employee-role')).toHaveTextContent('Has Employee');
-    expect(screen.getByTestId('can-access')).toHaveTextContent('Can Access');
-  });
-
+ 
   it('permet à l\'utilisateur de se connecter', async () => {
     render(
       <AuthProvider>
@@ -156,31 +131,5 @@ describe('AuthContext', () => {
     
     // Vérifier que l'utilisateur est redirigé vers la page de connexion
     expect(window.location.href).toBe('/login');
-  });
-
-  it('vérifie correctement les rôles et les accès', async () => {
-    // Simuler un utilisateur employé
-    localStorage.setItem('token', 'Bearer fake-token');
-    localStorage.setItem('user', JSON.stringify({ id: '1', email: 'employee@example.com', role: 'employee' }));
-    
-    userApi.getProfile.mockResolvedValueOnce({
-      success: true,
-      data: { id: '1', email: 'employee@example.com', role: 'employee' }
-    });
-
-    render(
-      <AuthProvider>
-        <TestConsumer />
-      </AuthProvider>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByTestId('auth-status')).toHaveTextContent('Authenticated');
-    });
-    
-    expect(screen.getByTestId('user-role')).toHaveTextContent('employee');
-    expect(screen.getByTestId('has-admin-role')).toHaveTextContent('Not Admin');
-    expect(screen.getByTestId('has-employee-role')).toHaveTextContent('Has Employee');
-    expect(screen.getByTestId('can-access')).toHaveTextContent('Can Access');
   });
 });

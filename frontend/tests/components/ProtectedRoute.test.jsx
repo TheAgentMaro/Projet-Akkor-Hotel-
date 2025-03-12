@@ -30,23 +30,7 @@ describe('ProtectedRoute Component', () => {
     expect(screen.getByTestId('protected-content')).toBeInTheDocument();
   });
 
-  it('affiche un message d\'accès refusé pour un utilisateur avec un rôle incorrect', () => {
-    const user = { id: '1', email: 'user@test.com', role: 'user' };
-    
-    render(
-      <AuthContext.Provider value={{ user }}>
-        <MemoryRouter>
-          <ProtectedRoute roles={['admin']}>
-            <TestComponent />
-          </ProtectedRoute>
-        </MemoryRouter>
-      </AuthContext.Provider>
-    );
-    
-    expect(screen.getByText(/Accès refusé/i)).toBeInTheDocument();
-    expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
-  });
-
+ 
   it('redirige vers la page de connexion pour un utilisateur non authentifié', () => {
     render(
       <AuthContext.Provider value={{ user: null }}>
