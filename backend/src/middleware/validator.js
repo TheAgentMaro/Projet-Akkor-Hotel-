@@ -60,10 +60,13 @@ const validator = {
 
   validateHotelCreate(req, res, next) {
     try {
-      console.log('Validation body:', req.body); // Debug log
-      console.log('Files:', req.files); // Debug log
+      console.log('Validation body dans validator:', req.body);
+      console.log('Files dans validator:', req.files);
   
       const { name, location, description } = req.body;
+  
+      // Debug des valeurs reçues
+      console.log('Valeurs reçues:', { name, location, description });
   
       // Vérification plus précise des champs
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
@@ -87,6 +90,7 @@ const validator = {
         });
       }
   
+      // Si tout est valide, on continue
       next();
     } catch (error) {
       console.error('Erreur validation:', error);

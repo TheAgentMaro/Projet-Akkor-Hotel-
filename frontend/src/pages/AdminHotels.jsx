@@ -9,6 +9,7 @@ function AdminHotels() {
   const navigate = useNavigate();
   const [hotels, setHotels] = useState([]);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -40,6 +41,7 @@ function AdminHotels() {
     try {
       setLoading(true);
       setError('');
+      setSuccessMessage('');
       const response = await hotelApi.getAllHotels({
         page: pagination.current,
         limit: pagination.limit,
@@ -100,6 +102,8 @@ function AdminHotels() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Reset error
+    setSuccessMessage(''); // Reset success message
     try {
       // Debug des données du formulaire
       console.log('FormData initial:', formData);
@@ -110,22 +114,29 @@ function AdminHotels() {
       const description = formData.description?.trim();
       
       console.log('Valeurs après trim:', { name, location, description });
-  
+
       if (!name || !location || !description) {
         setError('Tous les champs sont obligatoires');
         return;
       }
-  
+
       const formDataToSend = new FormData();
       formDataToSend.append('name', name);
       formDataToSend.append('location', location);
       formDataToSend.append('description', description);
-  
+
+      // Ajouter les images si présentes
+      if (formData.pictures?.length > 0) {
+        formData.pictures.forEach(pic => {
+          formDataToSend.append('picture_list', pic);
+        });
+      }
+
       // Debug du FormData avant envoi
       for (let [key, value] of formDataToSend.entries()) {
         console.log(`FormData avant envoi - ${key}:`, value);
       }
-  
+
       const response = await hotelApi.createHotel(formDataToSend);
       
       if (response.success) {
@@ -156,6 +167,8 @@ function AdminHotels() {
     setImagePreview([]);
     setEditMode(false);
     setEditHotelId(null);
+    setError('');
+    setSuccessMessage('');
   };
 
   function startEdit(hotel) {
@@ -194,6 +207,17 @@ function AdminHotels() {
           </div>
         </div>
 
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+        {successMessage && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            {successMessage}
+          </div>
+        )}
+        
         {/* Contrôles de tri */}
         <div className="mb-4 flex items-center space-x-4">
           <select

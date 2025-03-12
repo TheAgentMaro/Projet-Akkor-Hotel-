@@ -3,6 +3,49 @@ const router = express.Router();
 const hotelController = require('../controllers/hotelController');
 const auth = require('../middleware/auth');
 const validator = require('../middleware/validator');
+const multer = require('multer');
+const path = require('path');
+
+// Configuration de Multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  });
+  
+  const upload = multer({ 
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = /jpeg|jpg|png|gif/;
+      const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+      const mimetype = allowedTypes.test(file.mimetype);
+  
+      if (extname && mimetype) {
+        return cb(null, true);
+      } else {
+        cb(new Error('Seules les images sont autorisées!'));
+      }
+    }
+  });
+  
+  // Middleware pour parser le form-data avant la validation
+  const parseFormData = (req, res, next) => {
+    console.log('Body reçu dans parseFormData:', req.body);
+    next();
+  };
+  
+  router.post('/', 
+    auth.protect, 
+    auth.admin,
+    upload.array('picture_list', 5),
+    parseFormData,
+    validator.validateHotelCreate,
+    hotelController.createHotel
+  );
 
 /**
  * @swagger

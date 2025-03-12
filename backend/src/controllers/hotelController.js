@@ -73,10 +73,18 @@ const hotelController = {
   // Créer un nouvel hôtel (admin uniquement)
   async createHotel(req, res, next) {
     try {
-      console.log('Create Hotel - Body reçu:', req.body);
-      console.log('Create Hotel - Files reçus:', req.files);
+      console.log('Create Hotel - Body reçu dans controller:', req.body);
+      console.log('Create Hotel - Files reçus dans controller:', req.files);
   
       const { name, location, description } = req.body;
+  
+      // Vérification supplémentaire
+      if (!name || !location || !description) {
+        return res.status(400).json({
+          success: false,
+          error: 'Données manquantes dans le controller'
+        });
+      }
   
       // Création de l'hôtel
       const hotel = await Hotel.create({
