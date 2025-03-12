@@ -32,6 +32,7 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -49,6 +50,7 @@ export const authApi = {
       
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
       }
       
@@ -59,9 +61,13 @@ export const authApi = {
     }
   },
 
-  register: async (userData) => {
+  register: async (email, pseudo, password) => {
     try {
-      const response = await axiosInstance.post('/auth/register', userData);
+      const response = await axiosInstance.post('/auth/register', {
+        email,
+        pseudo,
+        password
+      });
       return response.data;
     } catch (error) {
       console.error('Erreur register:', error);
@@ -71,12 +77,14 @@ export const authApi = {
 
   logout: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     delete axiosInstance.defaults.headers.common['Authorization'];
   },
 };
 
 // API pour les utilisateurs
 export const userApi = {
+  // Obtenir son propre profil
   getProfile: async () => {
     try {
       const response = await axiosInstance.get('/users/profile');
@@ -87,6 +95,7 @@ export const userApi = {
     }
   },
 
+  // Mettre à jour son profil
   updateProfile: async (userData) => {
     try {
       const response = await axiosInstance.put('/users/profile', userData);
@@ -96,6 +105,63 @@ export const userApi = {
       throw error;
     }
   },
+
+  // Supprimer son compte
+  deleteAccount: async () => {
+    try {
+      const response = await axiosInstance.delete('/users/profile');
+      return response.data;
+    } catch (error) {
+      console.error('Erreur deleteAccount:', error);
+      throw error;
+    }
+  },
+
+  // Admin : Obtenir la liste des utilisateurs
+  getAllUsers: async () => {
+    try {
+      const response = await axiosInstance.get('/users');
+      return response.data;
+    } catch (error) {
+      console.error('Erreur getAllUsers:', error);
+      throw error;
+    }
+  },
+
+  // Admin : Obtenir un utilisateur par ID
+  getUserById: async (userId) => {
+    try {
+      const response = await axiosInstance.get(`/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur getUserById:', error);
+      throw error;
+    }
+  },
+
+  // Admin : Mettre à jour le rôle d'un utilisateur
+  updateUserRole: async (userId, role) => {
+    try {
+      const response = await axiosInstance.patch(`/users/${userId}/role`, { role });
+      return response.data;
+    } catch (error) {
+      console.error('Erreur updateUserRole:', error);
+      throw error;
+    }
+  },
+
+  // Employee : Rechercher des utilisateurs
+  searchUsers: async (query) => {
+    try {
+      const response = await axiosInstance.get('/users/search', {
+        params: { query }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erreur searchUsers:', error);
+      throw error;
+    }
+  }
 };
 
 // API pour les hôtels
@@ -124,20 +190,14 @@ export const hotelApi = {
 
   createHotel: async (formData) => {
     try {
-      // Debug des données envoyées
-      for (let [key, value] of formData.entries()) {
-        console.log('FormData:', key, value);
-      }
-
       const response = await axiosInstance.post('/hotels', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-
       return response.data;
     } catch (error) {
-      console.error('Erreur createHotel:', error.response?.data);
+      console.error('Erreur createHotel:', error);
       throw error;
     }
   },
@@ -175,6 +235,16 @@ export const bookingApi = {
       return response.data;
     } catch (error) {
       console.error('Erreur getAllBookings:', error);
+      throw error;
+    }
+  },
+
+  getBookingById: async (id) => {
+    try {
+      const response = await axiosInstance.get(`/bookings/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur getBookingById:', error);
       throw error;
     }
   },

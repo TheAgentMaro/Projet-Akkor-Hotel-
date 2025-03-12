@@ -1,33 +1,37 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/Layout';
+
+// Pages publiques
 import Home from './pages/Home';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import Profile from './pages/auth/Profile';
 import Hotels from './pages/Hotels';
-import Bookings from './pages/Bookings';
-import CreateBooking from './pages/CreateBooking';
+
+// Pages protégées
+import Profile from './pages/auth/Profile';
+import AdminUsers from './pages/AdminUsers';
 import AdminHotels from './pages/AdminHotels';
-import NotFound from './pages/NotFound';
-import { AuthProvider } from './context/AuthContext';
+import EmployeeUsers from './pages/EmployeeUsers';
+import Bookings from './pages/Bookings';
 
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          <Route path="/" element={<Layout />}>
+        <Layout>
+          <Routes>
             {/* Routes publiques */}
-            <Route index element={<Home />} />
-            <Route path="hotels" element={<Hotels />} />
-            <Route path="login" element={<Login />} />
-            <Route path="register" element={<Register />} />
-
-            {/* Routes protégées - Utilisateur connecté */}
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/hotels" element={<Hotels />} />
+            
+            {/* Routes protégées - Utilisateur */}
             <Route
-              path="profile"
+              path="/profile"
               element={
                 <ProtectedRoute>
                   <Profile />
@@ -35,37 +39,56 @@ function App() {
               }
             />
             <Route
-              path="bookings"
+              path="/bookings"
               element={
                 <ProtectedRoute>
                   <Bookings />
                 </ProtectedRoute>
               }
             />
+
+            {/* Routes protégées - Admin */}
             <Route
-              path="create-booking"
+              path="/admin/users"
               element={
-                <ProtectedRoute>
-                  <CreateBooking />
+                <ProtectedRoute requireAdmin>
+                  <AdminUsers />
                 </ProtectedRoute>
               }
             />
-
-            {/* Routes protégées - Admin uniquement */}
             <Route
-              path="admin-hotels"
+              path="/admin/hotels"
               element={
-                <ProtectedRoute requireAdmin={true}>
+                <ProtectedRoute requireAdmin>
                   <AdminHotels />
                 </ProtectedRoute>
               }
             />
 
-            {/* Gestion des routes non trouvées */}
-            <Route path="404" element={<NotFound />} />
-            <Route path="*" element={<Navigate to="/404" replace />} />
-          </Route>
-        </Routes>
+            {/* Routes protégées - Employee */}
+            <Route
+              path="/employee/users"
+              element={
+                <ProtectedRoute requireEmployee>
+                  <EmployeeUsers />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Route 404 */}
+            <Route
+              path="*"
+              element={
+                <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                  <div className="text-center p-8 bg-white rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold text-red-600 mb-4">Page non trouvée</h2>
+                    <p className="text-gray-600">La page que vous recherchez n'existe pas.</p>
+                  </div>
+                </div>
+              }
+            />
+          </Routes>
+        </Layout>
       </Router>
     </AuthProvider>
   );

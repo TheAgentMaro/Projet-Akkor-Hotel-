@@ -8,14 +8,14 @@ const Layout = () => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  console.log('État utilisateur dans Layout:', user); // Pour déboguer
-
   const navigationItems = [
     { path: '/', label: 'Accueil', public: true },
     { path: '/hotels', label: 'Hôtels', public: true },
     { path: '/bookings', label: 'Réservations', private: true },
     { path: '/profile', label: 'Profil', private: true },
-    { path: '/admin-hotels', label: 'Administration', adminOnly: true },
+    { path: '/admin/hotels', label: 'Gestion Hôtels', adminOnly: true },
+    { path: '/admin/users', label: 'Gestion Utilisateurs', adminOnly: true },
+    { path: '/employee/users', label: 'Recherche Utilisateurs', employeeOnly: true }
   ];
 
   const renderNavItems = () => {
@@ -77,6 +77,25 @@ const Layout = () => {
         );
       }
 
+      // Items employee (visibles pour les employés et admins)
+      if (item.employeeOnly && (user?.role === 'employee' || user?.role === 'admin')) {
+        return (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) =>
+              `px-3 py-2 rounded-md text-sm font-medium ${
+                isActive
+                  ? 'bg-blue-700 text-white'
+                  : 'text-white hover:bg-blue-500'
+              }`
+            }
+          >
+            {item.label}
+          </NavLink>
+        );
+      }
+
       return null;
     });
   };
@@ -105,12 +124,17 @@ const Layout = () => {
               {renderNavItems()}
               
               {user ? (
-                <button
-                  onClick={handleLogout}
-                  className="ml-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
-                >
-                  Déconnexion
-                </button>
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm">
+                    {user.pseudo} ({user.role})
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
+                  >
+                    Déconnexion
+                  </button>
+                </div>
               ) : (
                 <div className="flex items-center space-x-2">
                   <NavLink
@@ -163,18 +187,23 @@ const Layout = () => {
             <div className="md:hidden border-t border-blue-500 py-2">
               {renderNavItems()}
               {user ? (
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-3 py-2 text-white hover:bg-blue-700 rounded-md mt-2"
-                >
-                  Déconnexion
-                </button>
+                <div className="border-t border-blue-500 pt-2 mt-2">
+                  <div className="px-3 py-2 text-sm">
+                    {user.pseudo} ({user.role})
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 text-white hover:bg-blue-700 rounded-md"
+                  >
+                    Déconnexion
+                  </button>
+                </div>
               ) : (
-                <>
+                <div className="border-t border-blue-500 pt-2 mt-2">
                   <NavLink
                     to="/login"
                     className={({ isActive }) =>
-                      `block px-3 py-2 rounded-md text-sm font-medium mt-2 ${
+                      `block px-3 py-2 rounded-md text-sm font-medium ${
                         isActive
                           ? 'bg-blue-700 text-white'
                           : 'text-white hover:bg-blue-500'
@@ -197,16 +226,22 @@ const Layout = () => {
                   >
                     Inscription
                   </NavLink>
-                </>
+                </div>
               )}
             </div>
           )}
         </nav>
       </header>
 
-      <main className="flex-grow max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 container mx-auto px-4 py-8">
         <Outlet />
       </main>
+
+      <footer className="bg-gray-800 text-white py-8">
+        <div className="container mx-auto px-4">
+          <p className="text-center">&copy; 2024 Akkor Hotel. Tous droits réservés.</p>
+        </div>
+      </footer>
     </div>
   );
 };

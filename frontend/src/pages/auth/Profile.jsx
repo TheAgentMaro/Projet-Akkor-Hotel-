@@ -1,154 +1,201 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as Yup from 'yup';
 import { userApi } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
+import AuthContext from '../../context/AuthContext';
 
 function Profile() {
   const navigate = useNavigate();
-
-  const [userId, setUserId] = useState('');
+  const { user, logout } = useContext(AuthContext);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const validationSchema = Yup.object().shape({
-    email: Yup.string().required('Email requis').email('Format email invalide'),
-    pseudo: Yup.string().required('Pseudo requis').min(3, 'Minimum 3 caractères'),
-    password: Yup.string()
-      .transform((value, originalValue) => originalValue === '' ? undefined : value)
-      .notRequired()
+    email: Yup.string()
+      .required('Email requis')
+      .email('Format email invalide'),
+    pseudo: Yup.string()
+      .required('Pseudo requis')
+      .min(3, 'Minimum 3 caractères'),
+    currentPassword: Yup.string()
+      .required('Mot de passe actuel requis'),
+    newPassword: Yup.string()
       .min(6, 'Minimum 6 caractères'),
+    confirmPassword: Yup.string()
+      .oneOf([Yup.ref('newPassword')], 'Les mots de passe doivent correspondre')
   });
   
   const {
     register,
     handleSubmit,
     setValue,
+    reset,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(validationSchema),
+    defaultValues: {
+      email: user?.email || '',
+      pseudo: user?.pseudo || '',
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
   });
 
+  const newPassword = watch('newPassword');
+
   useEffect(() => {
-    async function fetchProfile() {
-      try {
-        const response = await userApi.getProfile();
-        if (response.success && response.data) {
-          const { id, email, pseudo } = response.data;
-          setUserId(id);
-          setValue('email', email);
-          setValue('pseudo', pseudo);
-        }
-      } catch (error) {
-        setErrorMessage(error.response?.data?.error || 'Erreur de récupération du profil');
-      }
+    if (user) {
+      setValue('email', user.email);
+      setValue('pseudo', user.pseudo);
     }
-    fetchProfile();
-  }, [setValue]);
+  }, [user, setValue]);
 
   const onSubmit = async (formData) => {
     try {
       setSuccessMessage('');
       setErrorMessage('');
 
-      if (!formData.password) {
-        delete formData.password;
-      }
+      const updateData = {
+        email: formData.email,
+        pseudo: formData.pseudo,
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword || undefined
+      };
 
-      const updateResponse = await userApi.updateUser(userId, formData);
-      if (updateResponse.success && updateResponse.data) {
+      const response = await userApi.updateProfile(updateData);
+      
+      if (response.success) {
         setSuccessMessage('Profil mis à jour avec succès !');
+        reset({
+          ...formData,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
       }
     } catch (error) {
-      setErrorMessage(error.response?.data?.error || 'Erreur lors de la mise à jour');
+      setErrorMessage(error.response?.data?.message || 'Erreur lors de la mise à jour');
     }
   };
 
   const handleDelete = async () => {
+    if (!isDeleting) {
+      setIsDeleting(true);
+      return;
+    }
+
     try {
-      setSuccessMessage('');
       setErrorMessage('');
-
-      const confirmDelete = window.confirm('Voulez-vous vraiment supprimer votre compte ?');
-      if (!confirmDelete) return;
-
-      const deleteResponse = await userApi.deleteUser(userId);
-      if (deleteResponse.success) {
-        localStorage.removeItem('token');
+      const response = await userApi.deleteAccount();
+      
+      if (response.success) {
+        logout();
         navigate('/login');
       }
     } catch (error) {
-      setErrorMessage(error.response?.data?.error || 'Erreur lors de la suppression');
+      setErrorMessage(error.response?.data?.message || 'Erreur lors de la suppression du compte');
+      setIsDeleting(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded shadow space-y-4">
-      <h1 className="text-2xl font-bold">Mon Profil</h1>
+    <div className="max-w-md mx-auto p-6 bg-white rounded shadow">
+      <h1 className="text-2xl font-bold mb-6">Mon Profil</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block font-semibold mb-1">
-            Email
-          </label>
+          <label className="block font-semibold mb-1">Email</label>
           <input
-            type="text"
-            id="email"
+            type="email"
             {...register('email')}
-            className="border border-gray-300 p-2 w-full"
+            className="border p-2 w-full rounded"
           />
-          {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
+          {errors.email && (
+            <p className="text-red-500 text-sm">{errors.email.message}</p>
+          )}
         </div>
 
         <div>
-          <label htmlFor="pseudo" className="block font-semibold mb-1">
-            Pseudo
-          </label>
+          <label className="block font-semibold mb-1">Pseudo</label>
           <input
             type="text"
-            id="pseudo"
             {...register('pseudo')}
-            className="border border-gray-300 p-2 w-full"
+            className="border p-2 w-full rounded"
           />
-          {errors.pseudo && <p className="text-red-500 text-sm">{errors.pseudo.message}</p>}
+          {errors.pseudo && (
+            <p className="text-red-500 text-sm">{errors.pseudo.message}</p>
+          )}
         </div>
 
         <div>
-          <label htmlFor="password" className="block font-semibold mb-1">
-            Nouveau mot de passe (optionnel)
-          </label>
+          <label className="block font-semibold mb-1">Mot de passe actuel</label>
           <input
             type="password"
-            id="password"
-            {...register('password')}
-            className="border border-gray-300 p-2 w-full"
+            {...register('currentPassword')}
+            className="border p-2 w-full rounded"
           />
-          {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
+          {errors.currentPassword && (
+            <p className="text-red-500 text-sm">{errors.currentPassword.message}</p>
+          )}
         </div>
 
-        <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-          Mettre à jour
-        </button>
+        <div>
+          <label className="block font-semibold mb-1">Nouveau mot de passe (optionnel)</label>
+          <input
+            type="password"
+            {...register('newPassword')}
+            className="border p-2 w-full rounded"
+          />
+          {errors.newPassword && (
+            <p className="text-red-500 text-sm">{errors.newPassword.message}</p>
+          )}
+        </div>
+
+        {newPassword && (
+          <div>
+            <label className="block font-semibold mb-1">Confirmer le nouveau mot de passe</label>
+            <input
+              type="password"
+              {...register('confirmPassword')}
+              className="border p-2 w-full rounded"
+            />
+            {errors.confirmPassword && (
+              <p className="text-red-500 text-sm">{errors.confirmPassword.message}</p>
+            )}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="text-red-500 font-semibold">{errorMessage}</div>
+        )}
+        {successMessage && (
+          <div className="text-green-500 font-semibold">{successMessage}</div>
+        )}
+
+        <div className="flex justify-between items-center">
+          <button
+            type="submit"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Mettre à jour
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDelete}
+            className={`${
+              isDeleting ? 'bg-red-600' : 'bg-red-500'
+            } text-white px-4 py-2 rounded hover:bg-red-600`}
+          >
+            {isDeleting ? 'Confirmer la suppression' : 'Supprimer mon compte'}
+          </button>
+        </div>
       </form>
-
-      <button
-        onClick={handleDelete}
-        className="bg-red-500 text-white p-2 rounded hover:bg-red-600"
-      >
-        Supprimer mon compte
-      </button>
-
-      {successMessage && (
-        <div className="text-green-600 font-semibold">
-          {successMessage}
-        </div>
-      )}
-      {errorMessage && (
-        <div className="text-red-600 font-semibold">
-          {errorMessage}
-        </div>
-      )}
     </div>
   );
 }
