@@ -1,5 +1,5 @@
 // src/pages/AdminHotels.jsx
-import React, { useEffect, useState, useContext, useRef } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { hotelApi } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
@@ -11,7 +11,6 @@ function AdminHotels() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(true);
-  const formRef = useRef(null);
   const [pagination, setPagination] = useState({
     current: 1,
     limit: 10,
@@ -54,7 +53,11 @@ function AdminHotels() {
       
       if (response.success) {
         setHotels(response.data);
-        setPagination(response.pagination);
+        setPagination(prev => ({
+          ...prev,
+          total: response.pagination?.total || 0,
+          pages: response.pagination?.pages || 1
+        }));
       } else {
         setError('Erreur lors du chargement des hôtels.');
       }
@@ -132,15 +135,10 @@ function AdminHotels() {
     setError(''); // Reset error
     setSuccessMessage(''); // Reset success message
     try {
-      // Debug des données du formulaire
-      console.log('FormData initial:', formData);
-      
       // Validation côté client plus stricte
       const name = formData.name?.trim();
       const location = formData.location?.trim();
       const description = formData.description?.trim();
-      
-      console.log('Valeurs après trim:', { name, location, description });
 
       if (!name || !location || !description) {
         setError('Tous les champs sont obligatoires');
@@ -160,19 +158,19 @@ function AdminHotels() {
         });
       }
 
-      // Debug du FormData avant envoi
-      for (let [key, value] of formDataToSend.entries()) {
-        console.log(`FormData avant envoi - ${key}:`, value);
+      let response;
+      if (editMode && editHotelId) {
+        response = await hotelApi.updateHotel(editHotelId, formDataToSend);
+      } else {
+        response = await hotelApi.createHotel(formDataToSend);
       }
-
-      const response = await hotelApi.createHotel(formDataToSend);
       
       if (response.success) {
-        setSuccessMessage(response.message || 'Hôtel créé avec succès');
+        setSuccessMessage(response.message || (editMode ? 'Hôtel modifié avec succès' : 'Hôtel créé avec succès'));
         resetForm();
         await loadHotels(); // Attendre que les hôtels soient rechargés
       } else {
-        setError(response.error || 'Erreur lors de la création');
+        setError(response.error || 'Erreur lors de l\'opération');
       }
     } catch (error) {
       console.error('Erreur complète:', error);
@@ -181,7 +179,7 @@ function AdminHotels() {
       } else if (error.message) {
         setError(error.message);
       } else {
-        setError('Une erreur est survenue lors de la création de l\'hôtel');
+        setError('Une erreur est survenue');
       }
     } finally {
       setLoading(false);
@@ -218,15 +216,20 @@ function AdminHotels() {
     const confirmDelete = window.confirm('Voulez-vous vraiment supprimer cet hôtel ?');
     if (!confirmDelete) return;
     try {
-      await hotelApi.deleteHotel(hotelId);
-      loadHotels();
+      const response = await hotelApi.deleteHotel(hotelId);
+      if (response.success) {
+        setSuccessMessage('Hôtel supprimé avec succès');
+        await loadHotels();
+      } else {
+        setError(response.error || "Erreur lors de la suppression de l'hôtel.");
+      }
     } catch (err) {
+      console.error('Erreur deleteHotel:', err);
       setError("Erreur lors de la suppression de l'hôtel.");
     }
   }
 
-  if (loading) return <div className="text-center text-gray-700">Chargement...</div>;
-  if (error) return <div className="text-center text-red-500">{error}</div>;
+  if (loading && hotels.length === 0) return <div className="text-center p-8 text-gray-700">Chargement...</div>;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -269,54 +272,62 @@ function AdminHotels() {
         </div>
 
         {/* Liste des hôtels */}
-        <ul className="space-y-4">
-          {hotels.map((hotel) => (
-            <li key={hotel._id} className="bg-white p-4 rounded shadow">
-              <div className="flex flex-wrap gap-4 mb-4">
-                {hotel.picture_list?.map((pic, index) => (
-                  <img
-                    key={index}
-                    src={pic}
-                    alt={`${hotel.name} - ${index + 1}`}
-                    className="w-24 h-24 object-cover rounded"
-                  />
-                ))}
-              </div>
-              <h2 className="font-semibold text-xl">{hotel.name}</h2>
-              <p className="text-gray-600">{hotel.location}</p>
-              <p className="text-gray-700 mt-2">{hotel.description}</p>
-              <div className="flex space-x-2 mt-4">
-                <button
-                  onClick={() => startEdit(hotel)}
-                  className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                >
-                  Éditer
-                </button>
-                <button
-                  onClick={() => handleDeleteHotel(hotel._id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                >
-                  Supprimer
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {hotels.length === 0 ? (
+          <div className="text-center p-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-500">Aucun hôtel trouvé. Créez votre premier hôtel !</p>
+          </div>
+        ) : (
+          <ul className="space-y-4">
+            {hotels.map((hotel) => (
+              <li key={hotel._id} className="bg-white p-4 rounded shadow">
+                <div className="flex flex-wrap gap-4 mb-4">
+                  {hotel.picture_list?.map((pic, index) => (
+                    <img
+                      key={`${hotel._id}-pic-${index}`}
+                      src={pic}
+                      alt={`${hotel.name} - ${index + 1}`}
+                      className="w-24 h-24 object-cover rounded"
+                    />
+                  ))}
+                </div>
+                <h2 className="font-semibold text-xl">{hotel.name}</h2>
+                <p className="text-gray-600">{hotel.location}</p>
+                <p className="text-gray-700 mt-2">{hotel.description}</p>
+                <div className="flex space-x-2 mt-4">
+                  <button
+                    onClick={() => startEdit(hotel)}
+                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                  >
+                    Éditer
+                  </button>
+                  <button
+                    onClick={() => handleDeleteHotel(hotel._id)}
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {/* Pagination */}
-        <div className="mt-4 flex justify-center space-x-2">
-          {Array.from({ length: pagination.pages }, (_, i) => (
-            <button
-              key={i + 1}
-              onClick={() => setPagination(prev => ({ ...prev, current: i + 1 }))}
-              className={`px-3 py-1 rounded ${
-                pagination.current === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
+        {pagination.pages > 1 && (
+          <div className="mt-4 flex justify-center space-x-2">
+            {Array.from({ length: pagination.pages }, (_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => setPagination(prev => ({ ...prev, current: i + 1 }))}
+                className={`px-3 py-1 rounded ${
+                  pagination.current === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
+                }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Formulaire */}
         <div className="bg-white p-6 rounded shadow">
@@ -324,7 +335,7 @@ function AdminHotels() {
             {editMode ? "Modifier l'Hôtel" : "Créer un Nouvel Hôtel"}
           </h2>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>
               <label className="block font-semibold mb-1">Nom</label>
               <input
@@ -394,6 +405,7 @@ function AdminHotels() {
               <button
                 type="submit"
                 className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                disabled={loading}
               >
                 {editMode ? 'Mettre à jour' : 'Créer'}
               </button>
