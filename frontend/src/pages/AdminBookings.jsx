@@ -31,13 +31,33 @@ function AdminBookings() {
       
       const response = await bookingApi.getAllBookings(params);
       
+      // Vérifier que la réponse a la structure attendue
       if (response.data) {
-        setBookings(response.data.data);
-        setTotalPages(response.data.pagination.pages);
+        // Gérer le cas où data est un tableau direct (pas de pagination)
+        if (Array.isArray(response.data)) {
+          setBookings(response.data);
+          setTotalPages(1); // Une seule page si pas de pagination
+        } 
+        // Gérer le cas où data contient data et pagination
+        else if (response.data.data) {
+          setBookings(response.data.data);
+          // Gérer le cas où pagination existe mais pas pages
+          setTotalPages(response.data.pagination?.pages || 1);
+        } 
+        // Gérer le cas où data est un objet mais sans structure attendue
+        else {
+          setBookings([]);
+          setTotalPages(1);
+          console.warn('Format de réponse inattendu:', response.data);
+        }
+      } else {
+        setBookings([]);
+        setTotalPages(1);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des réservations:', error);
       setError(error.response?.data?.message || 'Erreur lors du chargement des réservations');
+      setBookings([]); // Initialiser à un tableau vide en cas d'erreur
     } finally {
       setLoading(false);
     }
@@ -170,7 +190,7 @@ function AdminBookings() {
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
-      ) : bookings.length === 0 ? (
+      ) : !bookings || bookings.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
           <p className="text-gray-500">Aucune réservation trouvée</p>
         </div>

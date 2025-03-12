@@ -392,11 +392,9 @@ export const bookingApi = {
   },
 
   // Employee/Admin : Obtenir toutes les réservations
-  getAllBookings: async ({ search, status } = {}) => {
+  getAllBookings: async (params = {}) => {
     try {
-      const response = await axiosInstance.get('/bookings', {
-        params: { search, status }
-      });
+      const response = await axiosInstance.get('/bookings', { params });
       return response;
     } catch (error) {
       console.error('Erreur getAllBookings:', error);

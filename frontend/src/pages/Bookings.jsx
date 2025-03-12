@@ -18,22 +18,23 @@ function Bookings() {
   const loadBookings = async () => {
     try {
       setLoading(true);
-      let response;
       
-      // Utiliser la fonction appropriée selon le rôle de l'utilisateur
-      if (user.role === 'admin' || user.role === 'employee') {
-        // Pour les admins et employés : toutes les réservations
-        response = await bookingApi.getAllBookings();
-      } else {
-        // Pour les utilisateurs normaux : uniquement leurs réservations
-        response = await bookingApi.getUserBookings();
-      }
+      // Pour tous les utilisateurs : uniquement leurs propres réservations
+      // La page "Mes réservations" doit toujours montrer les réservations personnelles
+      const response = await bookingApi.getUserBookings();
       
       if (response.success) {
         setBookings(response.data);
+      } else if (response.data) {
+        // Fallback si la structure de réponse est différente
+        setBookings(Array.isArray(response.data) ? response.data : []);
+      } else {
+        setBookings([]);
       }
     } catch (error) {
+      console.error('Erreur lors du chargement des réservations:', error);
       setError(error.response?.data?.message || 'Erreur lors du chargement des réservations');
+      setBookings([]); // Initialiser à un tableau vide en cas d'erreur
     } finally {
       setLoading(false);
     }
