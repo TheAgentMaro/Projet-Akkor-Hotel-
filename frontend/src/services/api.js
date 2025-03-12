@@ -284,14 +284,24 @@ export const hotelApi = {
   // Admin : Supprimer un hôtel
   deleteHotel: async (id) => {
     try {
-      // Double confirmation pour la suppression
-      if (confirm('Êtes-vous sûr de vouloir supprimer cet hôtel ? Cette action est irréversible.')) {
-        const response = await axiosInstance.delete(`/hotels/${id}`);
-        return response;
+      // Vérification que l'ID est valide
+      if (!id) {
+        return {
+          success: false,
+          error: "ID d'hôtel non valide",
+          status: 400
+        };
       }
+      
+      const response = await axiosInstance.delete(`/hotels/${id}`);
+      return response.data;
     } catch (error) {
       console.error('Erreur deleteHotel:', error);
-      throw error;
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Erreur lors de la suppression',
+        status: error.response?.status || 500
+      };
     }
   }
 };

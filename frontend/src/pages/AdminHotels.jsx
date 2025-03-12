@@ -155,6 +155,12 @@ function AdminHotels() {
         setError('Tous les champs sont obligatoires');
         return;
       }
+      
+      // Validation de la longueur de la description (minimum 10 caractères)
+      if (description.length < 10) {
+        setError('La description doit contenir au moins 10 caractères');
+        return;
+      }
 
       setLoading(true);
       const formDataToSend = new FormData();
@@ -251,9 +257,17 @@ function AdminHotels() {
   }
 
   async function handleDeleteHotel(hotelId) {
+    // Vérifier que l'ID est valide
+    if (!hotelId) {
+      setError("Impossible de supprimer cet hôtel : ID non valide");
+      return;
+    }
+    
     const confirmDelete = window.confirm('Voulez-vous vraiment supprimer cet hôtel ?');
     if (!confirmDelete) return;
+    
     try {
+      setLoading(true);
       const response = await hotelApi.deleteHotel(hotelId);
       if (response.success) {
         setSuccessMessage('Hôtel supprimé avec succès');
@@ -264,6 +278,8 @@ function AdminHotels() {
     } catch (err) {
       console.error('Erreur deleteHotel:', err);
       setError("Erreur lors de la suppression de l'hôtel.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -389,15 +405,19 @@ function AdminHotels() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {hotels.map((hotel) => (
-              <div key={hotel._id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col border border-gray-100 group">
+            {hotels.map((hotel, index) => (
+              <div key={hotel._id || `hotel-${index}`} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col border border-gray-100 group">
                 <div className="relative h-52 bg-gray-200">
                   {hotel.picture_list && hotel.picture_list.length > 0 ? (
                     <img
-                      src={hotel.picture_list[0]}
+                      src={hotel.picture_list[0].startsWith('/uploads') ? `http://localhost:3000${hotel.picture_list[0]}` : hotel.picture_list[0]}
                       alt={hotel.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       loading="lazy"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://via.placeholder.com/400x300?text=Image+non+disponible';
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-100">
