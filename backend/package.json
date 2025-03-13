@@ -6,28 +6,38 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest",
+    "test": "cross-env NODE_ENV=test jest --detectOpenHandles",
+    "test:silent": "cross-env NODE_ENV=test jest --silent --detectOpenHandles",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "mongoose": "^7.5.0",
-    "passport": "^0.6.0",
-    "passport-jwt": "^4.0.1",
-    "jsonwebtoken": "^9.0.1",
+    "@prisma/client": "^6.5.0",
+    "akkor-hotel-backend": "file:",
     "bcryptjs": "^2.4.3",
-    "joi": "^17.9.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "http-errors": "^2.0.0",
+    "joi": "^17.9.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^7.5.0",
+    "multer": "^1.4.5-lts.1",
+    "passport": "^0.6.0",
+    "passport-jwt": "^4.0.1",
+    "prisma": "^6.5.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
-    "jest": "^29.6.4",
-    "supertest": "^6.3.3",
-    "nodemon": "^3.0.1",
+    "cross-env": "^7.0.3",
     "eslint": "^8.47.0",
-    "prettier": "^3.0.2"
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.1.4",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.0.2",
+    "supertest": "^6.3.4"
   }
 }

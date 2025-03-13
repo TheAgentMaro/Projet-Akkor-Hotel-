@@ -1,0 +1,67 @@
+// This is your Prisma schema file
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  email     String    @unique
+  password  String
+  firstName String
+  lastName  String
+  role      String    @default("user")
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Hotel {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String
+  address     String
+  city        String
+  country     String
+  rating      Float     @default(0)
+  price       Float
+  images      String[]
+  rooms       Room[]
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Room {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  hotelId     String    @db.ObjectId
+  number      String
+  type        String
+  price       Float
+  capacity    Int
+  description String
+  available   Boolean   @default(true)
+  hotel       Hotel     @relation(fields: [hotelId], references: [id])
+  bookings    Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Booking {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  hotelId   String   @db.ObjectId
+  roomId    String   @db.ObjectId
+  checkIn   DateTime
+  checkOut  DateTime
+  status    String   @default("pending")
+  user      User     @relation(fields: [userId], references: [id])
+  hotel     Hotel    @relation(fields: [hotelId], references: [id])
+  room      Room     @relation(fields: [roomId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const authController = require('../controllers/authController');
+const validator = require('../middleware/validator');
+const { protect } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -29,8 +32,17 @@ const router = express.Router();
  *     responses:
  *       201:
  *         description: Utilisateur créé avec succès
- *       400:
- *         description: Données invalides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *                 token:
+ *                   type: string
  *       409:
  *         description: Email déjà utilisé
  * 
@@ -62,20 +74,21 @@ const router = express.Router();
  *             schema:
  *               type: object
  *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
  *                 token:
  *                   type: string
- *                   description: JWT token
  *       401:
  *         description: Email ou mot de passe incorrect
  */
 
-// Routes à implémenter
-router.post('/register', (req, res) => {
-  // Implémentation à venir
-});
+// Routes publiques
+router.post('/register', validator.validateRegistration, authController.register);
+router.post('/login', validator.validateLogin, authController.login);
 
-router.post('/login', (req, res) => {
-  // Implémentation à venir
-});
+// Route protégée
+router.post('/logout', protect, authController.logout);
 
 module.exports = router;

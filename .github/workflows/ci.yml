@@ -1,13 +1,12 @@
 name: CI
 
 on:
-  # Temporairement désactivé - à réactiver plus tard
-  workflow_dispatch:
-    inputs:
-      enable_ci:
-        description: 'Activer le CI'
-        required: true
-        default: 'false'
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   test:

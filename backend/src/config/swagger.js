@@ -18,6 +18,12 @@ const options = {
         description: 'Serveur de développement'
       }
     ],
+    tags: [
+      {
+        name: 'Authentication',
+        description: 'Endpoints pour l\'authentification'
+      }
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {

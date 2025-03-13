@@ -1,0 +1,179 @@
+import React, { useEffect, useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { hotelApi } from '../services/api';
+import AuthContext from '../context/AuthContext';
+
+function Hotels() {
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const [hotels, setHotels] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  useEffect(() => {
+    loadHotels();
+  }, [currentPage]);
+
+  const loadHotels = async () => {
+    try {
+      setLoading(true);
+      const response = await hotelApi.getAllHotels({
+        page: currentPage,
+        limit: 10,
+        sort: 'createdAt',
+        order: 'desc'
+      });
+
+      if (response.success) {
+        // Afficher la structure des données pour le débogage
+        console.log('Données des hôtels reçues:', response.data);
+        
+        // S'assurer que chaque hôtel a un ID valide
+        const hotelsWithValidIds = response.data.map(hotel => {
+          // Vérifier si l'ID existe sous différentes formes possibles
+          if (!hotel.id && !hotel._id) {
+            console.warn('Hôtel sans ID détecté:', hotel);
+          }
+          return hotel;
+        });
+        
+        setHotels(hotelsWithValidIds);
+        setTotalPages(Math.ceil(response.total / 10));
+      } else {
+        console.error('Erreur lors du chargement des hôtels:', response.error);
+        setError(response.error || 'Erreur lors du chargement des hôtels');
+      }
+    } catch (error) {
+      console.error('Exception lors du chargement des hôtels:', error);
+      setError(error.response?.data?.message || 'Erreur lors du chargement des hôtels');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBooking = (hotelId) => {
+    // Vérifier que l'ID de l'hôtel est valide
+    if (!hotelId) {
+      console.error('ID d\'hôtel non défini');
+      return;
+    }
+    
+    if (!user) {
+      navigate('/login', { state: { from: `/hotels/${hotelId}` } });
+      return;
+    }
+    
+    // Utiliser l'ID de l'hôtel pour la navigation
+    console.log('Navigation vers la page de réservation avec ID:', hotelId);
+    navigate(`/bookings/create/${hotelId}`);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center p-8 bg-red-50 rounded-lg">
+          <p className="text-red-600 font-semibold">{error}</p>
+          <button
+            onClick={loadHotels}
+            className="mt-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Nos Hôtels</h1>
+        {user?.role === 'admin' && (
+          <button
+            onClick={() => navigate('/admin/hotels')}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Gérer les hôtels
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {hotels.map((hotel, index) => (
+          <div key={`hotel-${hotel._id || index}`} className="bg-white rounded-lg shadow-lg overflow-hidden">
+            {hotel.images && hotel.images.length > 0 && (
+              <img
+                key={`hotel-img-${hotel._id || index}`}
+                src={`${import.meta.env.VITE_API_URL}/uploads/${hotel.images[0]}`}
+                alt={hotel.name}
+                className="w-full h-48 object-cover"
+              />
+            )}
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">{hotel.name}</h2>
+              <p className="text-gray-600 mb-2">{hotel.location}</p>
+              <p className="text-gray-700 mb-4 line-clamp-3">{hotel.description}</p>
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-bold text-blue-600">{hotel.price}€ / nuit</span>
+                <button
+                  onClick={() => {
+                    // Vérifier et utiliser l'ID approprié (différentes conventions possibles)
+                    const hotelId = hotel._id || hotel.id || hotel.hotelId;
+                    console.log('Tentative de réservation pour l\'hôtel:', hotel);
+                    console.log('ID utilisé pour la réservation:', hotelId);
+                    handleBooking(hotelId);
+                  }}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                  Réserver
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-8 space-x-2">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 rounded ${
+              currentPage === 1
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
+            }`}
+          >
+            Précédent
+          </button>
+          <span className="px-4 py-2 text-gray-700">
+            Page {currentPage} sur {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 rounded ${
+              currentPage === totalPages
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-600 text-white'
+            }`}
+          >
+            Suivant
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default Hotels;

@@ -5,8 +5,10 @@ const passport = require('passport');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const connectDB = require('./config/database');
+const createError = require('http-errors');
 
 const app = express();
+const path = require('path');
 
 // Middleware
 app.use(cors());
@@ -20,24 +22,69 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 // Connexion à MongoDB
-connectDB();
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const hotelRoutes = require('./routes/hotelRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+
+// Ignorer les requêtes favicon.ico
+app.get('/favicon.ico', (req, res) => res.status(204));
+
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/hotels', hotelRoutes);
+app.use('/api/bookings', bookingRoutes);
+
+// Servir les fichiers statiques depuis le dossier uploads
+// Utiliser le chemin absolu pour éviter les problèmes de résolution
+const uploadsPath = path.join(__dirname, '..', 'uploads');
+console.log('Serving uploads from:', uploadsPath);
+app.use('/uploads', express.static(uploadsPath));
+
+// Route racine
+app.get('/', (req, res) => {
+  res.redirect('/api-docs');
+});
+
+// Route 404
+app.use((req, res, next) => {
+  next(createError(404, 'Route non trouvée'));
+});
 
 // Middleware de gestion des erreurs
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  // Ne pas logger les erreurs 404 en production
+  if (process.env.NODE_ENV !== 'production' || err.status !== 404) {
+    console.error(err);
+  }
+
+  // Erreurs de validation Mongoose
+  if (err.name === 'ValidationError') {
+    const messages = Object.values(err.errors).map(error => error.message);
+    return res.status(400).json({
+      success: false,
+      error: messages.join(', ')
+    });
+  }
+
+  res.status(err.status || 500).json({
     success: false,
-    message: 'Une erreur est survenue sur le serveur',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    error: err.message || 'Erreur serveur'
   });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.info(`Serveur démarré sur le port ${PORT}`);
-  console.info(`Documentation API disponible sur http://localhost:${PORT}/api-docs`);
-});
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`Serveur démarré sur le port ${PORT}`);
+    console.log(`Documentation API disponible sur http://localhost:${PORT}/api-docs`);
+  });
+}
+
+module.exports = app;
