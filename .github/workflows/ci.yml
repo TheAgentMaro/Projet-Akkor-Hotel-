@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  test:
+  test-and-build:
     runs-on: ubuntu-latest
 
     services:
@@ -29,7 +29,9 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-        
+        cache: 'npm' # Cache pour accélérer les installations
+
+    # Backend
     - name: Backend - Install dependencies
       working-directory: ./backend
       run: npm ci
@@ -38,6 +40,15 @@ jobs:
       working-directory: ./backend
       run: npm test
       
+    - name: Backend - Check security
+      working-directory: ./backend
+      run: npm audit --audit-level=moderate # Vérifie les vulnérabilités modérées ou plus graves
+
+    - name: Backend - Build (if applicable)
+      working-directory: ./backend
+      run: npm run build || echo "No build step required for backend" 
+      
+    # Frontend
     - name: Frontend - Install dependencies
       working-directory: ./frontend
       run: npm ci
@@ -45,3 +56,18 @@ jobs:
     - name: Frontend - Run tests
       working-directory: ./frontend
       run: npm test
+      
+    - name: Frontend - Check security
+      working-directory: ./frontend
+      run: npm audit --audit-level=moderate
+
+    - name: Frontend - Build
+      working-directory: ./frontend
+      run: npm run build 
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test-and-build 
+    steps:
+    - name: Simulate deployment
+      run: echo "Deploying the solution"
